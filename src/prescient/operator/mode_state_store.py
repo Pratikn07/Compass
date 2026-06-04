@@ -135,3 +135,30 @@ def _row_to_result(row: dict[str, Any]) -> dict[str, Any]:
         "warnings": row.get("warnings") or [],
         "created_at": row["created_at"],
     }
+
+
+DEFAULT_MODE_AUTHORIZATION_PATH = Path(".prescient/execution-mode.json")
+
+
+def build_mode_state_store(
+    *,
+    env: Mapping[str, str],
+    mode_path: str | Path | None = None,
+    create_client_factory: Any = None,
+) -> ModeStateStore:
+    """Select the store. Explicit mode_path forces the file store (test/local
+    seam). Otherwise, Supabase creds present -> Supabase; else file at the
+    default path.
+    """
+    if mode_path is not None:
+        return FileModeStateStore(Path(mode_path))
+
+    has_supabase = bool(
+        env.get("SUPABASE_URL", "").strip()
+        and env.get("SUPABASE_SERVICE_ROLE_KEY", "").strip()
+    )
+    if has_supabase:
+        return SupabaseModeStateStore.from_env(
+            env=env, create_client_factory=create_client_factory
+        )
+    return FileModeStateStore(DEFAULT_MODE_AUTHORIZATION_PATH)

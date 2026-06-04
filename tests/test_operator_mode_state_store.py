@@ -170,3 +170,45 @@ def test_supabase_store_write_failure_raises() -> None:
     store = SupabaseModeStateStore(client=client, schema="prescient_storage")
     with pytest.raises(RuntimeError):
         store.append_accepted(_accepted(ExecutionMode.PAPER))
+
+
+# --- build_mode_state_store factory ---------------------------------------
+
+from prescient.operator.mode_state_store import build_mode_state_store  # noqa: E402
+
+
+def test_factory_returns_file_store_without_supabase_env(tmp_path: Path) -> None:
+    store = build_mode_state_store(env={}, mode_path=tmp_path / "m.json")
+    assert isinstance(store, FileModeStateStore)
+
+
+def test_factory_returns_supabase_store_when_env_present() -> None:
+    captured: dict[str, str] = {}
+
+    def fake_factory(url: str, key: str) -> object:
+        captured["url"] = url
+        return object()
+
+    store = build_mode_state_store(
+        env={
+            "SUPABASE_URL": "https://x.supabase.co",
+            "SUPABASE_SERVICE_ROLE_KEY": "service-key",
+        },
+        mode_path=None,
+        create_client_factory=fake_factory,
+    )
+    assert isinstance(store, SupabaseModeStateStore)
+    assert captured["url"] == "https://x.supabase.co"
+
+
+def test_factory_explicit_mode_path_forces_file_store_even_with_env(
+    tmp_path: Path,
+) -> None:
+    store = build_mode_state_store(
+        env={
+            "SUPABASE_URL": "https://x.supabase.co",
+            "SUPABASE_SERVICE_ROLE_KEY": "service-key",
+        },
+        mode_path=tmp_path / "m.json",
+    )
+    assert isinstance(store, FileModeStateStore)

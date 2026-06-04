@@ -1,0 +1,502 @@
+{
+  "NTNX": {
+    "record_type": "strategy_decision",
+    "payload": {
+      "candidate_brief": {
+        "contradictions": [
+          "1 peer had negative scores."
+        ],
+        "direction": "bullish",
+        "earnings_date": "2026-06-02",
+        "main_thesis": "Bullish AI_STORAGE read-through for NTNX: 4 of 5 peers have positive earnings signal ahead of 2026-06-02 earnings.",
+        "peer_scores": [
+          {
+            "missing_factors": [],
+            "negative_factors": [],
+            "positive_factors": [
+              "eps_beat",
+              "revenue_beat",
+              "positive_guidance",
+              "positive_price_reaction",
+              "positive_theme_driver"
+            ],
+            "score": 5,
+            "ticker": "NTAP"
+          },
+          {
+            "missing_factors": [],
+            "negative_factors": [],
+            "positive_factors": [
+              "eps_beat",
+              "revenue_beat",
+              "positive_guidance",
+              "positive_price_reaction",
+              "positive_theme_driver"
+            ],
+            "score": 5,
+            "ticker": "PSTG"
+          },
+          {
+            "missing_factors": [],
+            "negative_factors": [],
+            "positive_factors": [
+              "eps_beat",
+              "revenue_beat",
+              "positive_guidance",
+              "positive_price_reaction",
+              "positive_theme_driver"
+            ],
+            "score": 5,
+            "ticker": "WDC"
+          },
+          {
+            "missing_factors": [],
+            "negative_factors": [],
+            "positive_factors": [
+              "eps_beat",
+              "revenue_beat",
+              "positive_guidance",
+              "positive_price_reaction",
+              "positive_theme_driver"
+            ],
+            "score": 5,
+            "ticker": "STX"
+          },
+          {
+            "missing_factors": [],
+            "negative_factors": [
+              "eps_miss",
+              "revenue_miss",
+              "negative_guidance",
+              "negative_price_reaction",
+              "negative_theme_driver"
+            ],
+            "positive_factors": [],
+            "score": -5,
+            "ticker": "DELL"
+          }
+        ],
+        "peer_signal_score": 3.0,
+        "peer_summaries": [],
+        "positive_peer_ratio": 0.8,
+        "recommended_expression": "CALL_OPTION",
+        "report_time": "AMC",
+        "reported_peers": [
+          "NTAP",
+          "PSTG",
+          "WDC",
+          "STX",
+          "DELL"
+        ],
+        "source_citations": [
+          {
+            "as_of": null,
+            "citation_id": "cit_0e8bbb367c54d824",
+            "confidence": "high",
+            "excerpt": null,
+            "provider": "prescient",
+            "retrieved_at": null,
+            "source_endpoint": null,
+            "source_id": "strategy_output_thresholds",
+            "source_type": "strategy_rule",
+            "title": "strategy-output-thresholds",
+            "url": null
+          }
+        ],
+        "strategy_status": "candidate_ready_for_analyst",
+        "supporting_evidence": [
+          "4 of 5 peers had positive scores.",
+          "4 peers beat revenue estimates.",
+          "4 peers showed positive guidance.",
+          "4 peers confirmed theme-driver evidence."
+        ],
+        "target": "NTNX",
+        "technical_indicators": null,
+        "theme": "AI_STORAGE"
+      },
+      "data_snapshot": {
+        "all_peer_data_missing": false,
+        "earnings_date": "2026-06-02",
+        "indicator_freshness": null,
+        "indicator_missing_fields": [],
+        "indicator_snapshot_present": false,
+        "indicator_source": null,
+        "missing_peer_factor_count": 0,
+        "option_contract_count": 1,
+        "options_chain_summary": [],
+        "peer_scores": [
+          {
+            "missing_factors": [],
+            "negative_factors": [],
+            "positive_factors": [
+              "eps_beat",
+              "revenue_beat",
+              "positive_guidance",
+              "positive_price_reaction",
+              "positive_theme_driver"
+            ],
+            "score": 5,
+            "ticker": "NTAP"
+          },
+          {
+            "missing_factors": [],
+            "negative_factors": [],
+            "positive_factors": [
+              "eps_beat",
+              "revenue_beat",
+              "positive_guidance",
+              "positive_price_reaction",
+              "positive_theme_driver"
+            ],
+            "score": 5,
+            "ticker": "PSTG"
+          },
+          {
+            "missing_factors": [],
+            "negative_factors": [],
+            "positive_factors": [
+              "eps_beat",
+              "revenue_beat",
+              "positive_guidance",
+              "positive_price_reaction",
+              "positive_theme_driver"
+            ],
+            "score": 5,
+            "ticker": "WDC"
+          },
+          {
+            "missing_factors": [],
+            "negative_factors": [],
+            "positive_factors": [
+              "eps_beat",
+              "revenue_beat",
+              "positive_guidance",
+              "positive_price_reaction",
+              "positive_theme_driver"
+            ],
+            "score": 5,
+            "ticker": "STX"
+          },
+          {
+            "missing_factors": [],
+            "negative_factors": [
+              "eps_miss",
+              "revenue_miss",
+              "negative_guidance",
+              "negative_price_reaction",
+              "negative_theme_driver"
+            ],
+            "positive_factors": [],
+            "score": -5,
+            "ticker": "DELL"
+          }
+        ],
+        "recommended_expression": "CALL_OPTION",
+        "reported_peers": [
+          "NTAP",
+          "PSTG",
+          "WDC",
+          "STX",
+          "DELL"
+        ],
+        "target": "NTNX",
+        "target_market_data": null,
+        "target_market_data_present": true,
+        "theme": "AI_STORAGE",
+        "thresholds": {
+          "allow_stock_fallback": true,
+          "max_target_runup_pct": 10.0,
+          "min_average_peer_score": 2.0,
+          "min_avg_daily_volume": 1000000,
+          "min_positive_peer_ratio": 0.67
+        }
+      },
+      "decision_summary": "candidate_ready_for_analyst",
+      "missing_data": [],
+      "rejection_details": [],
+      "rejection_reasons": [],
+      "settings_snapshot": {
+        "allow_stock_fallback": true,
+        "earnings_window_days": 1,
+        "max_option_expiration_days_after_earnings": 14,
+        "max_options_bid_ask_spread_pct": 15.0,
+        "max_target_runup_pct": 10.0,
+        "min_average_peer_score": 2.0,
+        "min_avg_daily_volume": 1000000,
+        "min_option_open_interest": 100,
+        "min_positive_peer_ratio": 0.67,
+        "min_reported_peers": 3,
+        "negative_price_reaction_pct": -3.0,
+        "peer_result_window_days": 21,
+        "positive_price_reaction_pct": 3.0
+      },
+      "source_events": [],
+      "strategy_decision": {
+        "audit": {
+          "all_peer_data_missing": false,
+          "indicator_freshness": null,
+          "indicator_missing_fields": [],
+          "indicator_snapshot_present": false,
+          "indicator_source": null,
+          "missing_peer_factor_count": 0,
+          "option_contract_count": 1,
+          "peer_scores": [
+            {
+              "missing_factors": [],
+              "negative_factors": [],
+              "positive_factors": [
+                "eps_beat",
+                "revenue_beat",
+                "positive_guidance",
+                "positive_price_reaction",
+                "positive_theme_driver"
+              ],
+              "score": 5,
+              "ticker": "NTAP"
+            },
+            {
+              "missing_factors": [],
+              "negative_factors": [],
+              "positive_factors": [
+                "eps_beat",
+                "revenue_beat",
+                "positive_guidance",
+                "positive_price_reaction",
+                "positive_theme_driver"
+              ],
+              "score": 5,
+              "ticker": "PSTG"
+            },
+            {
+              "missing_factors": [],
+              "negative_factors": [],
+              "positive_factors": [
+                "eps_beat",
+                "revenue_beat",
+                "positive_guidance",
+                "positive_price_reaction",
+                "positive_theme_driver"
+              ],
+              "score": 5,
+              "ticker": "WDC"
+            },
+            {
+              "missing_factors": [],
+              "negative_factors": [],
+              "positive_factors": [
+                "eps_beat",
+                "revenue_beat",
+                "positive_guidance",
+                "positive_price_reaction",
+                "positive_theme_driver"
+              ],
+              "score": 5,
+              "ticker": "STX"
+            },
+            {
+              "missing_factors": [],
+              "negative_factors": [
+                "eps_miss",
+                "revenue_miss",
+                "negative_guidance",
+                "negative_price_reaction",
+                "negative_theme_driver"
+              ],
+              "positive_factors": [],
+              "score": -5,
+              "ticker": "DELL"
+            }
+          ],
+          "source_citations": [
+            {
+              "as_of": null,
+              "citation_id": "cit_0e8bbb367c54d824",
+              "confidence": "high",
+              "excerpt": null,
+              "provider": "prescient",
+              "retrieved_at": null,
+              "source_endpoint": null,
+              "source_id": "strategy_output_thresholds",
+              "source_type": "strategy_rule",
+              "title": "strategy-output-thresholds",
+              "url": null
+            }
+          ],
+          "target": "NTNX",
+          "target_market_data_present": true,
+          "theme": "AI_STORAGE",
+          "thresholds": {
+            "allow_stock_fallback": true,
+            "max_target_runup_pct": 10.0,
+            "min_average_peer_score": 2.0,
+            "min_avg_daily_volume": 1000000,
+            "min_positive_peer_ratio": 0.67
+          }
+        },
+        "audit_trail": {
+          "citation_unavailable_reasons": [],
+          "decision_id": "dec_3ecd6209bedff0c2",
+          "decision_layer": "signal",
+          "decision_type": "strategy_decision",
+          "parent_decision_ids": [],
+          "related_event_ids": [],
+          "related_order_ids": [],
+          "rule_facts": [
+            {
+              "citation_ids": [],
+              "observed_value": 0.8,
+              "passed": true,
+              "reason": null,
+              "rule_name": "min_positive_peer_ratio",
+              "threshold": 0.67
+            },
+            {
+              "citation_ids": [],
+              "observed_value": 3.0,
+              "passed": true,
+              "reason": null,
+              "rule_name": "min_average_peer_score",
+              "threshold": 2.0
+            }
+          ],
+          "run_id": null,
+          "source_citations": [
+            {
+              "as_of": null,
+              "citation_id": "cit_0e8bbb367c54d824",
+              "confidence": "high",
+              "excerpt": null,
+              "provider": "prescient",
+              "retrieved_at": null,
+              "source_endpoint": null,
+              "source_id": "strategy_output_thresholds",
+              "source_type": "strategy_rule",
+              "title": "strategy-output-thresholds",
+              "url": null
+            }
+          ],
+          "target": "NTNX",
+          "theme": "AI_STORAGE"
+        },
+        "candidate": {
+          "contradictions": [
+            "1 peer had negative scores."
+          ],
+          "direction": "bullish",
+          "earnings_date": "2026-06-02",
+          "main_thesis": "Bullish AI_STORAGE read-through for NTNX: 4 of 5 peers have positive earnings signal ahead of 2026-06-02 earnings.",
+          "peer_scores": [
+            {
+              "missing_factors": [],
+              "negative_factors": [],
+              "positive_factors": [
+                "eps_beat",
+                "revenue_beat",
+                "positive_guidance",
+                "positive_price_reaction",
+                "positive_theme_driver"
+              ],
+              "score": 5,
+              "ticker": "NTAP"
+            },
+            {
+              "missing_factors": [],
+              "negative_factors": [],
+              "positive_factors": [
+                "eps_beat",
+                "revenue_beat",
+                "positive_guidance",
+                "positive_price_reaction",
+                "positive_theme_driver"
+              ],
+              "score": 5,
+              "ticker": "PSTG"
+            },
+            {
+              "missing_factors": [],
+              "negative_factors": [],
+              "positive_factors": [
+                "eps_beat",
+                "revenue_beat",
+                "positive_guidance",
+                "positive_price_reaction",
+                "positive_theme_driver"
+              ],
+              "score": 5,
+              "ticker": "WDC"
+            },
+            {
+              "missing_factors": [],
+              "negative_factors": [],
+              "positive_factors": [
+                "eps_beat",
+                "revenue_beat",
+                "positive_guidance",
+                "positive_price_reaction",
+                "positive_theme_driver"
+              ],
+              "score": 5,
+              "ticker": "STX"
+            },
+            {
+              "missing_factors": [],
+              "negative_factors": [
+                "eps_miss",
+                "revenue_miss",
+                "negative_guidance",
+                "negative_price_reaction",
+                "negative_theme_driver"
+              ],
+              "positive_factors": [],
+              "score": -5,
+              "ticker": "DELL"
+            }
+          ],
+          "peer_signal_score": 3.0,
+          "peer_summaries": [],
+          "positive_peer_ratio": 0.8,
+          "recommended_expression": "CALL_OPTION",
+          "report_time": "AMC",
+          "reported_peers": [
+            "NTAP",
+            "PSTG",
+            "WDC",
+            "STX",
+            "DELL"
+          ],
+          "source_citations": [
+            {
+              "as_of": null,
+              "citation_id": "cit_0e8bbb367c54d824",
+              "confidence": "high",
+              "excerpt": null,
+              "provider": "prescient",
+              "retrieved_at": null,
+              "source_endpoint": null,
+              "source_id": "strategy_output_thresholds",
+              "source_type": "strategy_rule",
+              "title": "strategy-output-thresholds",
+              "url": null
+            }
+          ],
+          "strategy_status": "candidate_ready_for_analyst",
+          "supporting_evidence": [
+            "4 of 5 peers had positive scores.",
+            "4 peers beat revenue estimates.",
+            "4 peers showed positive guidance.",
+            "4 peers confirmed theme-driver evidence."
+          ],
+          "target": "NTNX",
+          "technical_indicators": null,
+          "theme": "AI_STORAGE"
+        },
+        "claude_analysis_allowed": true,
+        "rejection_details": [],
+        "rejection_reasons": [],
+        "status": "candidate_ready_for_analyst"
+      },
+      "thesis": "Bullish AI_STORAGE read-through for NTNX: 4 of 5 peers have positive earnings signal ahead of 2026-06-02 earnings.",
+      "warnings": []
+    }
+  }
+}

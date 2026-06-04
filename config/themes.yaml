@@ -1,0 +1,14 @@
+themes:
+  AI_STORAGE:
+    tickers: [NTAP, PSTG, WDC, STX, NTNX]
+    drivers:
+      - AI data center demand
+      - enterprise storage growth
+      - cloud infrastructure spend
+
+  SEMICONDUCTORS:
+    tickers: [NVDA, AMD, AVGO, MRVL, MU]
+    drivers:
+      - AI accelerator demand
+      - data center capex
+      - memory pricing

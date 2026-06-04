@@ -1,0 +1,211 @@
+........................................................................ [ 12%]
+........................................................................ [ 24%]
+........................................................................ [ 36%]
+........................................................................ [ 48%]
+........................................................................ [ 60%]
+........................................................................ [ 72%]
+........................................................................ [ 84%]
+........................................................................ [ 96%]
+......................                                                   [100%]/Users/pratik.nandoskar/Documents/working/prescient/.venv/lib/python3.14/site-packages/_pytest/unraisableexception.py:33: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x1072f23e0>
+  gc.collect()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/Users/pratik.nandoskar/Documents/working/prescient/.venv/lib/python3.14/site-packages/_pytest/unraisableexception.py:33: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x1072f22f0>
+  gc.collect()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/Users/pratik.nandoskar/Documents/working/prescient/.venv/lib/python3.14/site-packages/_pytest/unraisableexception.py:33: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x1072f2200>
+  gc.collect()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/Users/pratik.nandoskar/Documents/working/prescient/.venv/lib/python3.14/site-packages/_pytest/unraisableexception.py:33: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x1072f2110>
+  gc.collect()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/Users/pratik.nandoskar/Documents/working/prescient/.venv/lib/python3.14/site-packages/_pytest/unraisableexception.py:33: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x1072f2020>
+  gc.collect()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/Users/pratik.nandoskar/Documents/working/prescient/.venv/lib/python3.14/site-packages/_pytest/unraisableexception.py:33: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x1072f1f30>
+  gc.collect()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/Users/pratik.nandoskar/Documents/working/prescient/.venv/lib/python3.14/site-packages/_pytest/unraisableexception.py:33: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x1072f1e40>
+  gc.collect()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/Users/pratik.nandoskar/Documents/working/prescient/.venv/lib/python3.14/site-packages/_pytest/unraisableexception.py:33: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x1072f1d50>
+  gc.collect()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/Users/pratik.nandoskar/Documents/working/prescient/.venv/lib/python3.14/site-packages/_pytest/unraisableexception.py:33: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x1072f2a70>
+  gc.collect()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/Users/pratik.nandoskar/Documents/working/prescient/.venv/lib/python3.14/site-packages/_pytest/unraisableexception.py:33: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x1072cbf10>
+  gc.collect()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/Users/pratik.nandoskar/Documents/working/prescient/.venv/lib/python3.14/site-packages/_pytest/unraisableexception.py:33: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x1072cbe20>
+  gc.collect()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/Users/pratik.nandoskar/Documents/working/prescient/.venv/lib/python3.14/site-packages/_pytest/unraisableexception.py:33: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x1072cbd30>
+  gc.collect()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/Users/pratik.nandoskar/Documents/working/prescient/.venv/lib/python3.14/site-packages/_pytest/unraisableexception.py:33: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x1072cbc40>
+  gc.collect()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/Users/pratik.nandoskar/Documents/working/prescient/.venv/lib/python3.14/site-packages/_pytest/unraisableexception.py:33: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x1072cbb50>
+  gc.collect()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/Users/pratik.nandoskar/Documents/working/prescient/.venv/lib/python3.14/site-packages/_pytest/unraisableexception.py:33: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x1072cba60>
+  gc.collect()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/Users/pratik.nandoskar/Documents/working/prescient/.venv/lib/python3.14/site-packages/_pytest/unraisableexception.py:33: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x1072cb970>
+  gc.collect()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/Users/pratik.nandoskar/Documents/working/prescient/.venv/lib/python3.14/site-packages/_pytest/unraisableexception.py:33: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x1072cb880>
+  gc.collect()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/Users/pratik.nandoskar/Documents/working/prescient/.venv/lib/python3.14/site-packages/_pytest/unraisableexception.py:33: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x1072cb790>
+  gc.collect()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/Users/pratik.nandoskar/Documents/working/prescient/.venv/lib/python3.14/site-packages/_pytest/unraisableexception.py:33: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x1072cb6a0>
+  gc.collect()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/Users/pratik.nandoskar/Documents/working/prescient/.venv/lib/python3.14/site-packages/_pytest/unraisableexception.py:33: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x1072cb5b0>
+  gc.collect()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/Users/pratik.nandoskar/Documents/working/prescient/.venv/lib/python3.14/site-packages/_pytest/unraisableexception.py:33: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x1072cb4c0>
+  gc.collect()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/Users/pratik.nandoskar/Documents/working/prescient/.venv/lib/python3.14/site-packages/_pytest/unraisableexception.py:33: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x1072cb3d0>
+  gc.collect()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/Users/pratik.nandoskar/Documents/working/prescient/.venv/lib/python3.14/site-packages/_pytest/unraisableexception.py:33: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x1072cb2e0>
+  gc.collect()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/Users/pratik.nandoskar/Documents/working/prescient/.venv/lib/python3.14/site-packages/_pytest/unraisableexception.py:33: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x1072cb1f0>
+  gc.collect()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/Users/pratik.nandoskar/Documents/working/prescient/.venv/lib/python3.14/site-packages/_pytest/unraisableexception.py:33: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x1072cb100>
+  gc.collect()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/Users/pratik.nandoskar/Documents/working/prescient/.venv/lib/python3.14/site-packages/_pytest/unraisableexception.py:33: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x1072cab60>
+  gc.collect()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/Users/pratik.nandoskar/Documents/working/prescient/.venv/lib/python3.14/site-packages/_pytest/unraisableexception.py:33: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x1072caa70>
+  gc.collect()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/Users/pratik.nandoskar/Documents/working/prescient/.venv/lib/python3.14/site-packages/_pytest/unraisableexception.py:33: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x1072ca980>
+  gc.collect()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/Users/pratik.nandoskar/Documents/working/prescient/.venv/lib/python3.14/site-packages/_pytest/unraisableexception.py:33: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x1072ca890>
+  gc.collect()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/Users/pratik.nandoskar/Documents/working/prescient/.venv/lib/python3.14/site-packages/_pytest/unraisableexception.py:33: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x1072ca7a0>
+  gc.collect()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/Users/pratik.nandoskar/Documents/working/prescient/.venv/lib/python3.14/site-packages/_pytest/unraisableexception.py:33: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x1072caf20>
+  gc.collect()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/Users/pratik.nandoskar/Documents/working/prescient/.venv/lib/python3.14/site-packages/_pytest/unraisableexception.py:33: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x1072cb010>
+  gc.collect()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/Users/pratik.nandoskar/Documents/working/prescient/.venv/lib/python3.14/site-packages/_pytest/unraisableexception.py:33: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x1072ca6b0>
+  gc.collect()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/Users/pratik.nandoskar/Documents/working/prescient/.venv/lib/python3.14/site-packages/_pytest/unraisableexception.py:33: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x1072ca5c0>
+  gc.collect()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/Users/pratik.nandoskar/Documents/working/prescient/.venv/lib/python3.14/site-packages/_pytest/unraisableexception.py:33: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x1072ca4d0>
+  gc.collect()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/Users/pratik.nandoskar/Documents/working/prescient/.venv/lib/python3.14/site-packages/_pytest/unraisableexception.py:33: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x1072ca3e0>
+  gc.collect()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/Users/pratik.nandoskar/Documents/working/prescient/.venv/lib/python3.14/site-packages/_pytest/unraisableexception.py:33: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x1072ca2f0>
+  gc.collect()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/Users/pratik.nandoskar/Documents/working/prescient/.venv/lib/python3.14/site-packages/_pytest/unraisableexception.py:33: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x1072ca200>
+  gc.collect()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/Users/pratik.nandoskar/Documents/working/prescient/.venv/lib/python3.14/site-packages/_pytest/unraisableexception.py:33: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x1072ca110>
+  gc.collect()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/Users/pratik.nandoskar/Documents/working/prescient/.venv/lib/python3.14/site-packages/_pytest/unraisableexception.py:33: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x1072ca020>
+  gc.collect()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/Users/pratik.nandoskar/Documents/working/prescient/.venv/lib/python3.14/site-packages/_pytest/unraisableexception.py:33: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x1072c9f30>
+  gc.collect()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/Users/pratik.nandoskar/Documents/working/prescient/.venv/lib/python3.14/site-packages/_pytest/unraisableexception.py:33: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x1072c9e40>
+  gc.collect()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/Users/pratik.nandoskar/Documents/working/prescient/.venv/lib/python3.14/site-packages/_pytest/unraisableexception.py:33: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x1072c9d50>
+  gc.collect()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/Users/pratik.nandoskar/Documents/working/prescient/.venv/lib/python3.14/site-packages/_pytest/unraisableexception.py:33: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x1072c9c60>
+  gc.collect()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/Users/pratik.nandoskar/Documents/working/prescient/.venv/lib/python3.14/site-packages/_pytest/unraisableexception.py:33: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x1072c9b70>
+  gc.collect()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/Users/pratik.nandoskar/Documents/working/prescient/.venv/lib/python3.14/site-packages/_pytest/unraisableexception.py:33: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x1072c9a80>
+  gc.collect()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/Users/pratik.nandoskar/Documents/working/prescient/.venv/lib/python3.14/site-packages/_pytest/unraisableexception.py:33: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x1072c9990>
+  gc.collect()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/Users/pratik.nandoskar/Documents/working/prescient/.venv/lib/python3.14/site-packages/_pytest/unraisableexception.py:33: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x1072c98a0>
+  gc.collect()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/Users/pratik.nandoskar/Documents/working/prescient/.venv/lib/python3.14/site-packages/_pytest/unraisableexception.py:33: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x1072c97b0>
+  gc.collect()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/Users/pratik.nandoskar/Documents/working/prescient/.venv/lib/python3.14/site-packages/_pytest/unraisableexception.py:33: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x1072c96c0>
+  gc.collect()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/Users/pratik.nandoskar/Documents/working/prescient/.venv/lib/python3.14/site-packages/_pytest/unraisableexception.py:33: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x1072c95d0>
+  gc.collect()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/Users/pratik.nandoskar/Documents/working/prescient/.venv/lib/python3.14/site-packages/_pytest/unraisableexception.py:33: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x1072c94e0>
+  gc.collect()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/Users/pratik.nandoskar/Documents/working/prescient/.venv/lib/python3.14/site-packages/_pytest/unraisableexception.py:33: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x1072c93f0>
+  gc.collect()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/Users/pratik.nandoskar/Documents/working/prescient/.venv/lib/python3.14/site-packages/_pytest/unraisableexception.py:33: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x1072c9300>
+  gc.collect()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/Users/pratik.nandoskar/Documents/working/prescient/.venv/lib/python3.14/site-packages/_pytest/unraisableexception.py:33: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x1072c9210>
+  gc.collect()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/Users/pratik.nandoskar/Documents/working/prescient/.venv/lib/python3.14/site-packages/_pytest/unraisableexception.py:33: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x1072c9120>
+  gc.collect()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+
+=============================== warnings summary ===============================
+.venv/lib/python3.14/site-packages/websockets/legacy/__init__.py:6
+  /Users/pratik.nandoskar/Documents/working/prescient/.venv/lib/python3.14/site-packages/websockets/legacy/__init__.py:6: DeprecationWarning: websockets.legacy is deprecated; see https://websockets.readthedocs.io/en/stable/howto/upgrade.html for upgrade instructions
+    warnings.warn(  # deprecated in 14.0 - 2024-11-09
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+================================ tests coverage ================================
+_______________ coverage: platform darwin, python 3.14.4-final-0 _______________
+
+Name                                        Stmts   Miss  Cover   Missing
+-------------------------------------------------------------------------
+src/prescient/broker/__init__.py               37      0   100%
+src/prescient/broker/alpaca.py                106     35    67%   61-62, 76, 83, 95, 119-121, 162, 165-204, 207-210
+src/prescient/broker/execution_guard.py        84      6    93%   85-88, 113, 122
+src/prescient/broker/interfaces.py             11      0   100%
+src/prescient/broker/mock.py                   60     13    78%   125-133, 136-154
+src/prescient/broker/models.py                 71      0   100%
+src/prescient/broker/robinhood.py             114     48    58%   70-71, 76-85, 90, 102, 112, 128, 140-142, 181-185, 188-235, 238-241
+src/prescient/data/gpt_summarizer.py           56     36    36%   26-35, 42-100
+src/prescient/runtime/__init__.py               5      0   100%
+src/prescient/runtime/decision_journal.py     126     12    90%   327, 373, 401, 423, 603-608, 661, 663, 695
+src/prescient/runtime/execution.py            161     25    84%   150, 156-157, 192-193, 260, 285-287, 428, 437, 477, 483, 495, 502, 506, 510-524
+src/prescient/runtime/journal.py               17      6    65%   15-21
+src/prescient/runtime/models.py               172      9    95%   109, 164, 166, 168, 172, 174, 176, 180, 182
+src/prescient/runtime/pipeline.py             270     43    84%   115-149, 427, 435, 457, 583, 606, 691, 703, 717, 726, 731, 757, 762, 772-774, 833, 837
+src/prescient/storage/__init__.py               6      0   100%
+src/prescient/storage/interfaces.py             9      0   100%
+src/prescient/storage/jsonl.py                 46      7    85%   36, 40, 55, 57, 59, 61, 63
+src/prescient/storage/models.py               117      2    98%   55, 196
+src/prescient/storage/sqlite.py                64      1    98%   68
+src/prescient/storage/supabase.py              93     51    45%   79-85, 96, 110, 120-125, 129-145, 149, 179-198
+-------------------------------------------------------------------------
+TOTAL                                        1625    294    82%
+598 passed, 1 warning in 3.48s

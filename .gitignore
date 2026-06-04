@@ -1,0 +1,32 @@
+# Secrets — NEVER commit
+.env
+.env.*
+!.env.example
+web/.env.local
+web/.env*.local
+
+# Runtime state (execution-mode file, operator logs) — not source
+.prescient/
+
+# Node / Next (root-level safety; web/ has its own too)
+node_modules/
+.next/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+*.egg-info/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+
+# Local data
+*.db
+*.sqlite
+journal.db
+data/cache/
+supabase/.temp/
+
+# OS
+.DS_Store

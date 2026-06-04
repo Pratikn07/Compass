@@ -7,7 +7,6 @@ from pathlib import Path
 from fastapi import Depends, FastAPI, Header, HTTPException, status
 
 from prescient.operator.mode_authorization import (
-    DEFAULT_MODE_AUTHORIZATION_PATH,
     authorize_execution_mode,
     read_operator_status,
 )
@@ -29,11 +28,14 @@ def create_app(
     app = FastAPI(title="prescient operator actions", version="0.1.0")
     active_env = env if env is not None else os.environ
     active_token = token or active_env.get("PRESCIENT_OPERATOR_API_TOKEN", "").strip()
-    active_mode_path = Path(
+    # Explicit path (arg or env) forces the file store; otherwise leave None so
+    # the store factory can select Supabase when SUPABASE_* env is present.
+    explicit_mode_path = (
         mode_path
-        or active_env.get("PRESCIENT_MODE_AUTHORIZATION_PATH", "")
-        or DEFAULT_MODE_AUTHORIZATION_PATH
+        if mode_path is not None
+        else active_env.get("PRESCIENT_MODE_AUTHORIZATION_PATH") or None
     )
+    active_mode_path = Path(explicit_mode_path) if explicit_mode_path else None
     active_kill_switch_path = kill_switch_path or active_env.get("PRESCIENT_KILL_SWITCH_PATH")
 
     def require_token(authorization: str | None = Header(default=None)) -> None:

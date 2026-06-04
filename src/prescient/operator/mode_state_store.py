@@ -20,7 +20,9 @@ class ModeStateStore(Protocol):
     raise on persistence failure (never silently succeed).
     """
 
-    def read_latest_accepted(self) -> ModeAuthorizationResult | None: ...
+    def read_latest_accepted(
+        self, *, warnings: list[str] | None = None
+    ) -> ModeAuthorizationResult | None: ...
 
     def append_accepted(self, result: ModeAuthorizationResult) -> None: ...
 
@@ -35,13 +37,17 @@ class FileModeStateStore:
     def __init__(self, path: Path) -> None:
         self._path = Path(path)
 
-    def read_latest_accepted(self) -> ModeAuthorizationResult | None:
+    def read_latest_accepted(
+        self, *, warnings: list[str] | None = None
+    ) -> ModeAuthorizationResult | None:
         if not self._path.exists():
             return None
         try:
             payload = json.loads(self._path.read_text(encoding="utf-8"))
             return ModeAuthorizationResult.model_validate(payload)
         except (OSError, json.JSONDecodeError, ValidationError):
+            if warnings is not None:
+                warnings.append(f"mode authorization state unreadable at {self._path}")
             return None
 
     def append_accepted(self, result: ModeAuthorizationResult) -> None:
@@ -64,7 +70,9 @@ class SupabaseModeStateStore:
         self._client = client
         self._schema = schema
 
-    def read_latest_accepted(self) -> ModeAuthorizationResult | None:
+    def read_latest_accepted(
+        self, *, warnings: list[str] | None = None
+    ) -> ModeAuthorizationResult | None:
         try:
             response = (
                 self._client.schema(self._schema)
@@ -75,6 +83,8 @@ class SupabaseModeStateStore:
                 .execute()
             )
         except Exception:
+            if warnings is not None:
+                warnings.append("operator mode state unreadable: supabase read failed")
             return None
 
         rows = getattr(response, "data", None) or []
@@ -83,6 +93,8 @@ class SupabaseModeStateStore:
         try:
             return ModeAuthorizationResult.model_validate(_row_to_result(rows[0]))
         except Exception:
+            if warnings is not None:
+                warnings.append("operator mode state unreadable: malformed row")
             return None
 
     def append_accepted(self, result: ModeAuthorizationResult) -> None:

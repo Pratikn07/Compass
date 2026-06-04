@@ -1,14 +1,15 @@
 from __future__ import annotations
 
-import json
 import os
 from collections.abc import Mapping
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
 
-from pydantic import ValidationError
-
+from prescient.operator.mode_state_store import (
+    DEFAULT_MODE_AUTHORIZATION_PATH,
+    ModeStateStore,
+    build_mode_state_store,
+)
 from prescient.operator.models import (
     ModeAuthorizationRequest,
     ModeAuthorizationResult,
@@ -18,9 +19,14 @@ from prescient.operator.models import (
 from prescient.risk.models import ExecutionMode
 from prescient.safety import get_kill_switch_state
 
-
-DEFAULT_MODE_AUTHORIZATION_PATH = Path(".prescient/execution-mode.json")
 LIVE_CONFIRMATION_TEXT = "AUTHORIZE LIVE TRADING"
+
+__all__ = [
+    "DEFAULT_MODE_AUTHORIZATION_PATH",
+    "LIVE_CONFIRMATION_TEXT",
+    "authorize_execution_mode",
+    "read_operator_status",
+]
 
 
 def read_operator_status(
@@ -28,13 +34,13 @@ def read_operator_status(
     mode_path: str | Path | None = None,
     kill_switch_path: str | Path | None = None,
     env: Mapping[str, str] | None = None,
+    store: ModeStateStore | None = None,
 ) -> OperatorStatus:
     active_env = env if env is not None else os.environ
+    active_store = store or build_mode_state_store(env=active_env, mode_path=mode_path)
     warnings: list[str] = []
-    mode, source, latest = _read_mode_state(
-        path=Path(mode_path) if mode_path is not None else DEFAULT_MODE_AUTHORIZATION_PATH,
-        env=active_env,
-        warnings=warnings,
+    mode, source, latest = _interpret_mode_state(
+        store=active_store, env=active_env, warnings=warnings
     )
 
     return OperatorStatus(
@@ -53,11 +59,14 @@ def authorize_execution_mode(
     env: Mapping[str, str] | None = None,
     allow_live: bool = False,
     now: datetime | None = None,
+    store: ModeStateStore | None = None,
 ) -> ModeAuthorizationResult:
     active_env = env if env is not None else os.environ
-    path = Path(mode_path) if mode_path is not None else DEFAULT_MODE_AUTHORIZATION_PATH
+    active_store = store or build_mode_state_store(env=active_env, mode_path=mode_path)
     warnings: list[str] = []
-    previous_mode, _, _ = _read_mode_state(path=path, env=active_env, warnings=warnings)
+    previous_mode, _, _ = _interpret_mode_state(
+        store=active_store, env=active_env, warnings=warnings
+    )
     timestamp = now or datetime.now(timezone.utc)
     rejection_reasons = _mode_rejection_reasons(request, allow_live=allow_live)
     status = (
@@ -80,7 +89,7 @@ def authorize_execution_mode(
     )
 
     if status == ModeAuthorizationStatus.ACCEPTED:
-        _write_mode_state(path, result)
+        active_store.append_accepted(result)
 
     return result
 
@@ -101,9 +110,9 @@ def _mode_rejection_reasons(
     return reasons
 
 
-def _read_mode_state(
+def _interpret_mode_state(
     *,
-    path: Path,
+    store: ModeStateStore,
     env: Mapping[str, str],
     warnings: list[str],
 ) -> tuple[ExecutionMode, str, ModeAuthorizationResult | None]:
@@ -112,35 +121,25 @@ def _read_mode_state(
         try:
             mode = ExecutionMode(env_mode)
         except ValueError:
-            warnings.append("PRESCIENT_EXECUTION_MODE was invalid; defaulting to propose_only")
+            warnings.append(
+                "PRESCIENT_EXECUTION_MODE was invalid; defaulting to propose_only"
+            )
             return ExecutionMode.PROPOSE_ONLY, "default", None
 
         if mode == ExecutionMode.LIVE:
-            warnings.append("PRESCIENT_EXECUTION_MODE=live is disabled; defaulting to propose_only")
+            warnings.append(
+                "PRESCIENT_EXECUTION_MODE=live is disabled; defaulting to propose_only"
+            )
             return ExecutionMode.PROPOSE_ONLY, "default", None
         return mode, "environment", None
 
-    if not path.exists():
+    latest = store.read_latest_accepted(warnings=warnings)
+    if latest is None:
         return ExecutionMode.PROPOSE_ONLY, "default", None
-
-    try:
-        payload: Any = json.loads(path.read_text(encoding="utf-8"))
-        latest = ModeAuthorizationResult.model_validate(payload)
-    except (OSError, json.JSONDecodeError, ValidationError):
-        warnings.append(f"mode authorization state unreadable at {path}")
-        return ExecutionMode.PROPOSE_ONLY, "default", None
-
     if latest.status != ModeAuthorizationStatus.ACCEPTED:
         return ExecutionMode.PROPOSE_ONLY, "default", latest
     if latest.active_mode == ExecutionMode.LIVE:
         warnings.append("live mode authorization is disabled; defaulting to propose_only")
         return ExecutionMode.PROPOSE_ONLY, "default", latest
 
-    return latest.active_mode, "file", latest
-
-
-def _write_mode_state(path: Path, result: ModeAuthorizationResult) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    tmp_path = path.with_name(f".{path.name}.tmp")
-    tmp_path.write_text(result.model_dump_json(), encoding="utf-8")
-    os.replace(tmp_path, path)
+    return latest.active_mode, "store", latest

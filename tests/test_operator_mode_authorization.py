@@ -90,7 +90,7 @@ def test_authorizing_paper_writes_mode_state(tmp_path: Path) -> None:
 
     status = read_operator_status(mode_path=mode_path, env={})
     assert status.execution_mode == ExecutionMode.PAPER
-    assert status.mode_source == "file"
+    assert status.mode_source == "store"
 
 
 def test_invalid_mode_file_fails_closed_to_propose_only(tmp_path: Path) -> None:

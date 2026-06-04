@@ -54,3 +54,119 @@ def test_file_store_unreadable_returns_none(tmp_path: Path) -> None:
     path.write_text("{not json", encoding="utf-8")
     store = FileModeStateStore(path)
     assert store.read_latest_accepted() is None
+
+
+# --- SupabaseModeStateStore (fake client) ---------------------------------
+
+from typing import Any  # noqa: E402
+
+from prescient.operator.mode_state_store import SupabaseModeStateStore  # noqa: E402
+
+
+class _FakeQuery:
+    def __init__(self, client: "_FakeSupabaseClient") -> None:
+        self._client = client
+
+    def insert(self, row: dict[str, Any]) -> "_FakeQuery":
+        if self._client.write_error:
+            raise self._client.write_error
+        self._client.inserted.append(row)
+        return self
+
+    def select(self, columns: str) -> "_FakeQuery":
+        return self
+
+    def order(self, column: str, desc: bool = False) -> "_FakeQuery":
+        return self
+
+    def limit(self, n: int) -> "_FakeQuery":
+        return self
+
+    def execute(self) -> Any:
+        if self._client.read_error:
+            raise self._client.read_error
+        return type("Resp", (), {"data": self._client.rows})()
+
+
+class _FakeSchema:
+    def __init__(self, client: "_FakeSupabaseClient") -> None:
+        self._client = client
+
+    def table(self, name: str) -> _FakeQuery:
+        self._client.table_name = name
+        return _FakeQuery(self._client)
+
+
+class _FakeSupabaseClient:
+    def __init__(
+        self,
+        *,
+        rows: list[dict[str, Any]] | None = None,
+        read_error: Exception | None = None,
+        write_error: Exception | None = None,
+    ) -> None:
+        self.rows = rows or []
+        self.read_error = read_error
+        self.write_error = write_error
+        self.inserted: list[dict[str, Any]] = []
+        self.table_name: str | None = None
+
+    def schema(self, name: str) -> _FakeSchema:
+        return _FakeSchema(self)
+
+
+def _row(active: str = "paper") -> dict[str, Any]:
+    return {
+        "status": "accepted",
+        "requested_mode": active,
+        "previous_mode": "propose_only",
+        "active_mode": active,
+        "actor": "operator@example.com",
+        "reason": "paper validation",
+        "rejection_reasons": [],
+        "warnings": [],
+        "created_at": "2026-06-04T12:00:00+00:00",
+    }
+
+
+def test_supabase_store_reads_latest_row() -> None:
+    client = _FakeSupabaseClient(rows=[_row("paper")])
+    store = SupabaseModeStateStore(client=client, schema="prescient_storage")
+    loaded = store.read_latest_accepted()
+    assert loaded is not None
+    assert loaded.active_mode == ExecutionMode.PAPER
+    assert client.table_name == "operator_mode_authorizations"
+
+
+def test_supabase_store_empty_returns_none() -> None:
+    client = _FakeSupabaseClient(rows=[])
+    store = SupabaseModeStateStore(client=client, schema="prescient_storage")
+    assert store.read_latest_accepted() is None
+
+
+def test_supabase_store_read_failure_returns_none() -> None:
+    client = _FakeSupabaseClient(read_error=TimeoutError("db unreachable"))
+    store = SupabaseModeStateStore(client=client, schema="prescient_storage")
+    assert store.read_latest_accepted() is None
+
+
+def test_supabase_store_malformed_row_returns_none() -> None:
+    client = _FakeSupabaseClient(rows=[{"status": "accepted"}])  # missing fields
+    store = SupabaseModeStateStore(client=client, schema="prescient_storage")
+    assert store.read_latest_accepted() is None
+
+
+def test_supabase_store_append_inserts_row() -> None:
+    client = _FakeSupabaseClient()
+    store = SupabaseModeStateStore(client=client, schema="prescient_storage")
+    store.append_accepted(_accepted(ExecutionMode.PAPER))
+    assert len(client.inserted) == 1
+    assert client.inserted[0]["active_mode"] == "paper"
+    assert client.inserted[0]["status"] == "accepted"
+
+
+def test_supabase_store_write_failure_raises() -> None:
+    client = _FakeSupabaseClient(write_error=RuntimeError("insert denied"))
+    store = SupabaseModeStateStore(client=client, schema="prescient_storage")
+    with pytest.raises(RuntimeError):
+        store.append_accepted(_accepted(ExecutionMode.PAPER))

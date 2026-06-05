@@ -125,12 +125,44 @@ def _today() -> str:
     return datetime.now(timezone.utc).date().isoformat()
 
 
-def main() -> int:
+def _probe_fmp_raw(config: ProviderConfig) -> None:
+    """Dump FMP's RAW stock-peers JSON for AAPL so we can diagnose shape drift.
+
+    Read-only, one call. Helps resolve a malformed_response without guessing.
+    """
+    import httpx
+
+    if not config.has("fmp"):
+        print("fmp raw probe: SKIPPED (no key)")
+        return
+    for endpoint in ("/stock-peers", "/stock_peers"):
+        url = f"https://financialmodelingprep.com/stable{endpoint}"
+        try:
+            resp = httpx.get(
+                url,
+                params={"symbol": "AAPL", "apikey": config.fmp_api_key},
+                timeout=10.0,
+            )
+            print(f"fmp raw {endpoint}: HTTP {resp.status_code}")
+            body = resp.text[:800]
+            print(f"  body: {body}")
+        except Exception as exc:
+            print(f"fmp raw {endpoint}: exception {type(exc).__name__}: {exc}")
+
+
+def main(argv: list[str] | None = None) -> int:
+    import sys
+
+    args = argv if argv is not None else sys.argv[1:]
     config = ProviderConfig.from_env(os.environ)
     print(f"Provider verification — {config}")
     print("-" * 60)
     code = verify(config)
     print("-" * 60)
+    if "--raw" in args:
+        print("Raw probes:")
+        _probe_fmp_raw(config)
+        print("-" * 60)
     print("DONE" if code == 0 else "ONE OR MORE CONFIGURED PROVIDERS FAILED")
     return code
 

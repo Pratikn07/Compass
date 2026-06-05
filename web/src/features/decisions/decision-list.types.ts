@@ -16,6 +16,11 @@ export type DecisionListItem = {
   outcome: string;
   mode: string | null;
   thesis: string | null;
+  earningsDate: string | null;
+  evidenceSummary: string | null;
+  peerSignalScore: number | null;
+  attentionStatus: "normal" | "needs_attention";
+  attentionReasons: string[];
   /** True when the row's payload failed schema validation. */
   malformed: boolean;
   /** Raw payload JSON, retained only for malformed rows so the issue is visible. */

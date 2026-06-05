@@ -7,6 +7,8 @@ import yaml  # type: ignore[import-untyped]
 
 from prescient.signal.models import StrategyUniverse, ThemeConfig
 
+_WATCHLIST_SCHEMA_VERSION = 1
+
 
 def load_strategy_universe(path: str | Path) -> StrategyUniverse:
     with Path(path).open("r", encoding="utf-8") as file:
@@ -36,6 +38,38 @@ def parse_strategy_universe(raw: Mapping[str, Any]) -> StrategyUniverse:
         )
 
     return StrategyUniverse(themes=themes)
+
+
+def build_watchlist_seed_rows(
+    universe: StrategyUniverse,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    watchlists: list[dict[str, Any]] = []
+    items: list[dict[str, Any]] = []
+
+    for theme in universe.themes:
+        watchlist_id = f"theme:{theme.name}"
+        watchlists.append(
+            {
+                "watchlist_id": watchlist_id,
+                "name": theme.name.replace("_", " "),
+                "description": ", ".join(theme.drivers) if theme.drivers else None,
+                "source": "strategy_universe",
+                "schema_version": _WATCHLIST_SCHEMA_VERSION,
+            }
+        )
+        for sort_order, ticker in enumerate(theme.tickers):
+            items.append(
+                {
+                    "watchlist_item_id": f"{watchlist_id}:{ticker}",
+                    "watchlist_id": watchlist_id,
+                    "ticker": ticker,
+                    "theme": theme.name,
+                    "sort_order": sort_order,
+                    "schema_version": _WATCHLIST_SCHEMA_VERSION,
+                }
+            )
+
+    return watchlists, items
 
 
 def _list_value(data: Mapping[Any, Any], key: str) -> list[str]:

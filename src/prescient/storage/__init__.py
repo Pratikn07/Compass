@@ -8,6 +8,10 @@ from prescient.storage.interfaces import (
 )
 from prescient.storage.jsonl import JsonlStorageAdapter
 from prescient.storage.models import (
+    DecisionAttentionStatus,
+    SystemHealthComponent,
+    SystemHealthRecord,
+    SystemHealthStatus,
     StorageConfigurationError,
     StorageError,
     StorageErrorType,
@@ -27,6 +31,10 @@ __all__ = [
     "LearningReportStorage",
     "ProviderSnapshotStorage",
     "JsonlStorageAdapter",
+    "DecisionAttentionStatus",
+    "SystemHealthComponent",
+    "SystemHealthRecord",
+    "SystemHealthStatus",
     "StorageConfigurationError",
     "StorageError",
     "StorageErrorType",

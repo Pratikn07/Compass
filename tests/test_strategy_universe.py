@@ -6,7 +6,11 @@ import pytest
 from pydantic import ValidationError
 
 from prescient.signal.models import StrategyUniverse, ThemeConfig
-from prescient.signal.universe import load_strategy_universe, parse_strategy_universe
+from prescient.signal.universe import (
+    build_watchlist_seed_rows,
+    load_strategy_universe,
+    parse_strategy_universe,
+)
 
 
 def test_loads_current_themes_config() -> None:
@@ -116,3 +120,45 @@ def test_universe_does_not_expand_strategy_types() -> None:
             }
         ]
     }
+
+
+def test_builds_read_only_watchlist_seed_rows_from_universe() -> None:
+    universe = StrategyUniverse(
+        themes=[
+            ThemeConfig(
+                name="AI_STORAGE",
+                tickers=["NTAP", "PSTG"],
+                drivers=["AI data center demand"],
+            )
+        ]
+    )
+
+    watchlists, items = build_watchlist_seed_rows(universe)
+
+    assert watchlists == [
+        {
+            "watchlist_id": "theme:AI_STORAGE",
+            "name": "AI STORAGE",
+            "description": "AI data center demand",
+            "source": "strategy_universe",
+            "schema_version": 1,
+        }
+    ]
+    assert items == [
+        {
+            "watchlist_item_id": "theme:AI_STORAGE:NTAP",
+            "watchlist_id": "theme:AI_STORAGE",
+            "ticker": "NTAP",
+            "theme": "AI_STORAGE",
+            "sort_order": 0,
+            "schema_version": 1,
+        },
+        {
+            "watchlist_item_id": "theme:AI_STORAGE:PSTG",
+            "watchlist_id": "theme:AI_STORAGE",
+            "ticker": "PSTG",
+            "theme": "AI_STORAGE",
+            "sort_order": 1,
+            "schema_version": 1,
+        },
+    ]

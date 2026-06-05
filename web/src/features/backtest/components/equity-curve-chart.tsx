@@ -11,9 +11,21 @@ import {
   YAxis,
 } from "recharts";
 import { Card } from "@/components/ui/card";
-import type { EquityCurvePoint } from "@/features/backtest/lib/backtest-view-model";
+import type {
+  BacktestDisplayMode,
+  EquityCurvePoint,
+} from "@/features/backtest/lib/backtest-view-model";
 
-export function EquityCurveChart({ data }: { data: EquityCurvePoint[] }) {
+export function EquityCurveChart({
+  data,
+  mode,
+}: {
+  data: EquityCurvePoint[];
+  mode: BacktestDisplayMode;
+}) {
+  const strategyKey = mode === "percent" ? "strategyReturnPct" : "strategyEquity";
+  const buyHoldKey = mode === "percent" ? "buyHoldReturnPct" : "buyHoldEquity";
+
   return (
     <Card className="grid gap-4">
       <div>
@@ -38,7 +50,7 @@ export function EquityCurveChart({ data }: { data: EquityCurvePoint[] }) {
                 stroke="var(--muted-foreground)"
               />
               <YAxis
-                tickFormatter={(value) => `$${Number(value).toLocaleString()}`}
+                tickFormatter={(value) => formatChartValue(Number(value), mode)}
                 tickLine={false}
                 tickMargin={8}
                 stroke="var(--muted-foreground)"
@@ -46,24 +58,28 @@ export function EquityCurveChart({ data }: { data: EquityCurvePoint[] }) {
               />
               <Tooltip
                 formatter={(value, name) => [
-                  `$${Number(value ?? 0).toLocaleString()}`,
+                  formatChartValue(Number(value ?? 0), mode),
                   name ?? "Value",
                 ]}
                 labelFormatter={(_, payload) => payload?.[0]?.payload?.date ?? ""}
               />
               <Legend />
               <Line
-                dataKey="strategyEquity"
+                dataKey={strategyKey}
                 dot={{ r: 3 }}
-                name="Strategy equity"
+                name={mode === "percent" ? "Strategy return" : "Strategy equity"}
                 stroke="var(--primary)"
                 strokeWidth={2}
                 type="monotone"
               />
               <Line
-                dataKey="buyHoldEquity"
+                dataKey={buyHoldKey}
                 dot={{ r: 3 }}
-                name="Buy-and-hold equity"
+                name={
+                  mode === "percent"
+                    ? "Buy-and-hold return"
+                    : "Buy-and-hold equity"
+                }
                 stroke="var(--warning)"
                 strokeWidth={2}
                 type="monotone"
@@ -78,4 +94,11 @@ export function EquityCurveChart({ data }: { data: EquityCurvePoint[] }) {
       )}
     </Card>
   );
+}
+
+function formatChartValue(value: number, mode: BacktestDisplayMode): string {
+  if (mode === "percent") {
+    return `${value.toFixed(2)}%`;
+  }
+  return `$${value.toLocaleString()}`;
 }

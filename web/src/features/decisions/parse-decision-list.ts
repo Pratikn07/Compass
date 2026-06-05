@@ -22,6 +22,11 @@ export function parseDecisionList(rows: DecisionRecordRow[]): DecisionListItem[]
         outcome: "malformed",
         mode: row.execution_mode,
         thesis: null,
+        earningsDate: null,
+        evidenceSummary: null,
+        peerSignalScore: null,
+        attentionStatus: "needs_attention",
+        attentionReasons: ["malformed_payload"],
         malformed: true,
         rawPayload: formatJson(row.payload),
       };
@@ -46,10 +51,24 @@ export function parseDecisionList(rows: DecisionRecordRow[]): DecisionListItem[]
         parsedPayload.thesis ??
         parsedPayload.candidate_brief?.main_thesis ??
         null,
+      earningsDate: parsedPayload.candidate_brief?.earnings_date ?? null,
+      evidenceSummary: firstSupportingEvidence(
+        parsedPayload.candidate_brief?.supporting_evidence,
+      ),
+      peerSignalScore: parsedPayload.candidate_brief?.peer_signal_score ?? null,
+      attentionStatus:
+        row.attention_status === "needs_attention" ? "needs_attention" : "normal",
+      attentionReasons: Array.isArray(row.attention_reasons)
+        ? row.attention_reasons
+        : [],
       malformed: false,
       rawPayload: null,
     };
   });
+}
+
+function firstSupportingEvidence(evidence?: string[]): string | null {
+  return evidence?.find((item) => item.trim().length > 0) ?? null;
 }
 
 function deriveListOutcome(status: string, explicitOutcome?: string): string {

@@ -45,6 +45,40 @@ describe("DecisionChainView", () => {
     ]);
   });
 
+  it("renders header status, outcome, and mode badges", () => {
+    render(<DecisionChainView decisionId="decision-1" records={chainRecords()} />);
+
+    const badges = screen.getByTestId("decision-chain-header-badges");
+    expect(within(badges).getByText("Strategy status")).toBeInTheDocument();
+    expect(within(badges).getByText("candidate ready for analyst")).toBeInTheDocument();
+    expect(within(badges).getByText("Latest outcome")).toBeInTheDocument();
+    expect(within(badges).getByText("pending")).toBeInTheDocument();
+    expect(within(badges).getByText("Mode")).toBeInTheDocument();
+    expect(within(badges).getByText("propose only")).toBeInTheDocument();
+  });
+
+  it("renders enriched strategy evidence without blocked trade fields", () => {
+    render(<DecisionChainView decisionId="decision-1" records={chainRecords()} />);
+
+    expect(screen.getByText("Trigger summary")).toBeInTheDocument();
+    expect(screen.getByText("Peer read-through evidence")).toBeInTheDocument();
+    expect(screen.getByText("Peer scores")).toBeInTheDocument();
+    expect(screen.getByText("2026-06-03")).toBeInTheDocument();
+    expect(screen.getByText("75%")).toBeInTheDocument();
+    expect(screen.getByRole("cell", { name: "PSTG" })).toBeInTheDocument();
+    expect(screen.getByRole("cell", { name: "AI storage demand" })).toBeInTheDocument();
+    expect(screen.getByText("Signal score")).toBeInTheDocument();
+    expect(screen.queryByText(/edge bp/i)).not.toBeInTheDocument();
+  });
+
+  it("renders analyst conviction as analyst conviction, not confidence", () => {
+    render(<DecisionChainView decisionId="decision-1" records={chainRecords()} />);
+
+    expect(screen.getByText("Analyst conviction")).toBeInTheDocument();
+    expect(screen.getByText("0.68")).toBeInTheDocument();
+    expect(screen.queryByText(/^Confidence$/i)).not.toBeInTheDocument();
+  });
+
   it("makes the risk card visually dominant with semantic status text", () => {
     render(<DecisionChainView decisionId="decision-1" records={chainRecords()} />);
 
@@ -66,6 +100,29 @@ describe("DecisionChainView", () => {
     expect(
       screen.getByText("Read-only. Quantity was code-decided."),
     ).toBeInTheDocument();
+    expect(screen.getByText("Account equity")).toBeInTheDocument();
+    expect(screen.getByText("Unit max loss")).toBeInTheDocument();
+    expect(screen.getByText("Claude present")).toBeInTheDocument();
+    expect(screen.getByText("Claude sizing override attempted")).toBeInTheDocument();
+  });
+
+  it("renders only available execution proposal leg fields", () => {
+    render(<DecisionChainView decisionId="decision-1" records={chainRecords()} />);
+
+    const executionCard = screen.getByTestId("execution-proposal-card");
+    expect(within(executionCard).getByText("Available proposal legs")).toBeInTheDocument();
+    expect(within(executionCard).getByRole("columnheader", { name: "Side" })).toBeInTheDocument();
+    expect(within(executionCard).getByRole("columnheader", { name: "Symbol" })).toBeInTheDocument();
+    expect(within(executionCard).getByRole("columnheader", { name: "Quantity" })).toBeInTheDocument();
+    expect(within(executionCard).getByRole("cell", { name: "long" })).toBeInTheDocument();
+    expect(
+      within(executionCard).getByRole("cell", { name: "NTNX 2026-06-19 55C" }),
+    ).toBeInTheDocument();
+    expect(within(executionCard).getByRole("cell", { name: "4" })).toBeInTheDocument();
+    expect(within(executionCard).queryByRole("columnheader", { name: "Strike" })).not.toBeInTheDocument();
+    expect(within(executionCard).queryByRole("columnheader", { name: "IV" })).not.toBeInTheDocument();
+    expect(within(executionCard).queryByRole("columnheader", { name: "Price" })).not.toBeInTheDocument();
+    expect(within(executionCard).queryByRole("columnheader", { name: "Credit" })).not.toBeInTheDocument();
   });
 
   it("renders parse errors with raw JSON diagnostic detail", () => {
@@ -93,6 +150,12 @@ describe("DecisionChainView", () => {
     expect(
       screen.getAllByRole("link", { name: "Peer earnings release" })[0],
     ).toHaveAttribute("href", "https://example.test/peer-earnings");
+    expect(screen.getAllByText("Evidence confidence: high")[0]).toBeInTheDocument();
+    expect(screen.getAllByText("Endpoint: /stock/earnings")[0]).toBeInTheDocument();
+    expect(screen.getAllByText("Source id: PSTG:2026-Q1")[0]).toBeInTheDocument();
+    expect(
+      screen.getAllByText("Peer earnings release cited stronger enterprise storage demand.")[0],
+    ).toBeInTheDocument();
   });
 
   it("does not render interactive trading controls", () => {

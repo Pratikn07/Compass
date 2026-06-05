@@ -6,7 +6,12 @@ export const sourceCitation = {
   source_type: "earnings_release",
   title: "Peer earnings release",
   url: "https://example.test/peer-earnings",
+  source_endpoint: "/stock/earnings",
+  source_id: "PSTG:2026-Q1",
+  as_of: "2026-06-01",
   retrieved_at: "2026-06-01T13:00:00Z",
+  excerpt: "Peer earnings release cited stronger enterprise storage demand.",
+  confidence: "high",
 };
 
 export const auditTrail = {

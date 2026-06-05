@@ -10,13 +10,15 @@ import type { DecisionListItem } from "./decision-list.types";
 
 export function DecisionList({ decisions }: { decisions: DecisionListItem[] }) {
   return (
-    <Table className="min-w-[760px]">
+    <Table className="min-w-[1040px]">
       <caption className="sr-only">Projected strategy decisions</caption>
       <thead>
         <tr>
           <Th>Target</Th>
           <Th>Theme</Th>
+          <Th>Earnings</Th>
           <Th>Strategy</Th>
+          <Th>Evidence</Th>
           <Th>Status</Th>
           <Th>Outcome</Th>
           <Th>Mode</Th>
@@ -42,8 +44,16 @@ export function DecisionList({ decisions }: { decisions: DecisionListItem[] }) {
               <Td className="text-muted-foreground">
                 {formatDecisionValue(decision.theme)}
               </Td>
+              <Td className="whitespace-nowrap text-muted-foreground">
+                {formatDecisionValue(decision.earningsDate)}
+              </Td>
               <Td className="text-muted-foreground">
                 {formatDecisionValue(decision.strategyType)}
+              </Td>
+              <Td className="max-w-[24rem] text-muted-foreground">
+                <span className="line-clamp-2">
+                  {decision.evidenceSummary ?? "unknown"}
+                </span>
               </Td>
               <Td>
                 <Badge dot variant={badgeVariantForDecisionValue(decision.status)}>
@@ -78,13 +88,9 @@ function MalformedRow({ decision }: { decision: DecisionListItem }) {
         </span>
       </Td>
       <Td className="text-muted-foreground">{formatDecisionValue(decision.theme)}</Td>
+      <Td className="whitespace-nowrap text-muted-foreground">unknown</Td>
       <Td className="text-muted-foreground">—</Td>
-      <Td>
-        <Badge dot variant="danger">
-          malformed
-        </Badge>
-      </Td>
-      <Td colSpan={2}>
+      <Td className="max-w-[24rem]">
         <details className="text-xs">
           <summary className="cursor-pointer font-medium text-danger focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">
             Show raw detail
@@ -93,6 +99,19 @@ function MalformedRow({ decision }: { decision: DecisionListItem }) {
             {decision.rawPayload}
           </pre>
         </details>
+      </Td>
+      <Td>
+        <Badge dot variant="danger">
+          malformed
+        </Badge>
+      </Td>
+      <Td>
+        <Badge dot variant="danger">
+          malformed
+        </Badge>
+      </Td>
+      <Td>
+        <Badge variant="muted">unknown</Badge>
       </Td>
     </tr>
   );

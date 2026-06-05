@@ -2,12 +2,13 @@
 
 import { useState } from "react";
 import { KeyRound, ShieldCheck, Undo2 } from "lucide-react";
-import { ErrorState } from "@/components/states/error-state";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { useModeAuthorizationMutation } from "@/lib/operator/hooks";
 import type { ModeAuthorizationResult } from "@/lib/operator/schemas";
+
+const MIN_REASON_LENGTH = 10;
+const MAX_REASON_LENGTH = 1000;
 
 export function ModeAuthorizationPanel({
   latestModeAuthorization,
@@ -16,12 +17,16 @@ export function ModeAuthorizationPanel({
 }) {
   const [reason, setReason] = useState("");
   const mutation = useModeAuthorizationMutation();
-  const disabled = reason.trim().length === 0 || mutation.isPending;
+  const trimmedReason = reason.trim();
+  const disabled =
+    trimmedReason.length < MIN_REASON_LENGTH ||
+    trimmedReason.length > MAX_REASON_LENGTH ||
+    mutation.isPending;
 
   function requestMode(requestedMode: "paper" | "propose_only") {
     mutation.mutate({
       requestedMode,
-      reason: reason.trim(),
+      reason: trimmedReason,
     });
   }
 
@@ -74,15 +79,26 @@ export function ModeAuthorizationPanel({
         ) : null}
       </div>
 
-      <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(12rem,1fr)_auto_auto]">
+      <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(16rem,1fr)_auto_auto] lg:items-end">
         <label className="grid gap-1 text-sm">
-          <span>Reason</span>
-          <Input
+          <span className="font-medium">Reason</span>
+          <textarea
             aria-label="Reason"
             value={reason}
-            onChange={(event) => setReason(event.target.value)}
-            placeholder="paper validation"
+            maxLength={MAX_REASON_LENGTH}
+            onChange={(event) =>
+              setReason(event.target.value.slice(0, MAX_REASON_LENGTH))
+            }
+            placeholder="Describe why this mode change is needed."
+            rows={4}
+            className="min-h-28 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20"
           />
+          <span className="flex items-center justify-between gap-3 text-xs text-muted-foreground">
+            <span>Minimum 10 characters.</span>
+            <span className="font-mono">
+              {reason.length}/{MAX_REASON_LENGTH}
+            </span>
+          </span>
         </label>
         <Button
           type="button"
@@ -103,20 +119,60 @@ export function ModeAuthorizationPanel({
         </Button>
       </div>
 
-      {mutation.data?.status === "rejected" ? (
-        <div className="mt-4 rounded-card border border-danger bg-danger/10 p-3 text-sm text-danger">
-          Rejected: {mutation.data.rejectionReasons.join(", ")}
-        </div>
-      ) : null}
-
-      {mutation.isError ? (
-        <div className="mt-4">
-          <ErrorState
-            title="Mode request failed"
-            detail={mutation.error instanceof Error ? mutation.error.message : undefined}
-          />
-        </div>
-      ) : null}
+      <RequestStatusBox
+        latestModeAuthorization={latestModeAuthorization}
+        mutation={mutation}
+      />
     </section>
+  );
+}
+
+function RequestStatusBox({
+  latestModeAuthorization,
+  mutation,
+}: {
+  latestModeAuthorization: ModeAuthorizationResult | null;
+  mutation: ReturnType<typeof useModeAuthorizationMutation>;
+}) {
+  const result = mutation.data;
+  let badgeVariant: "muted" | "success" | "danger" | "warning" = "muted";
+  let title = "No request submitted in this session.";
+  let detail =
+    latestModeAuthorization?.createdAt ??
+    "Only authorized operators may submit mode changes.";
+
+  if (mutation.isPending) {
+    badgeVariant = "warning";
+    title = "Request pending";
+    detail = "Waiting for operator authorization response.";
+  } else if (result?.status === "accepted") {
+    badgeVariant = "success";
+    title = "Request accepted";
+    detail = `Active mode: ${result.activeMode}`;
+  } else if (result?.status === "rejected") {
+    badgeVariant = "danger";
+    title = "Request rejected";
+    detail = result.rejectionReasons.length
+      ? result.rejectionReasons.join(", ")
+      : "The operator endpoint rejected the request.";
+  } else if (mutation.isError) {
+    badgeVariant = "danger";
+    title = "Request failed";
+    detail =
+      mutation.error instanceof Error
+        ? mutation.error.message
+        : "The request failed before authorization completed.";
+  }
+
+  return (
+    <div className="mt-4 rounded-card border border-border bg-background p-3 text-sm">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <p className="font-medium">Request status</p>
+        <Badge dot variant={badgeVariant}>
+          {title}
+        </Badge>
+      </div>
+      <p className="mt-2 text-muted-foreground">{detail}</p>
+    </div>
   );
 }

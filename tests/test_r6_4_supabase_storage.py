@@ -10,6 +10,8 @@ import pytest
 from prescient.runtime.models import DecisionJournalRecord, DecisionJournalRecordType
 from prescient.storage import (
     JsonlStorageAdapter,
+    SystemHealthRecord,
+    SystemHealthStatus,
     StorageConfigurationError,
     StorageError,
     StorageErrorType,
@@ -102,6 +104,8 @@ def test_storage_record_projects_decision_row_only_for_strategy_decision() -> No
         "strategy_type": "bullish_earnings_readthrough",
         "strategy_status": "candidate_ready_for_analyst",
         "execution_mode": "propose_only",
+        "attention_status": "normal",
+        "attention_reasons": [],
         "payload": {"thesis": "Bullish AI_STORAGE read-through for NTNX."},
         "schema_version": 1,
         "created_at": "2026-06-01T14:30:00Z",
@@ -204,6 +208,8 @@ def test_supabase_adapter_upserts_run_and_decision_projections() -> None:
             "strategy_type": "bullish_earnings_readthrough",
             "strategy_status": "candidate_ready_for_analyst",
             "execution_mode": "propose_only",
+            "attention_status": "normal",
+            "attention_reasons": [],
             "payload": {"thesis": "Bullish AI_STORAGE read-through for NTNX."},
             "schema_version": 1,
             "created_at": "2026-06-01T14:30:00Z",
@@ -213,7 +219,128 @@ def test_supabase_adapter_upserts_run_and_decision_projections() -> None:
         "journal_records": "journal_record_id",
         "runs": "run_id",
         "decision_records": "decision_record_id",
+        "system_health": "system_health_id",
     }
+
+
+def test_supabase_adapter_derives_attention_from_related_journal_records() -> None:
+    fake_client = FakeSupabaseClient()
+    adapter = SupabaseStorageAdapter(client=fake_client, schema="prescient_storage")
+    strategy = _record(
+        journal_record_id="jrnl_strategy",
+        decision_id="decision_attention",
+    ).model_copy(
+        update={
+            "payload": {
+                "thesis": "Bullish AI_STORAGE read-through for NTNX.",
+                "missing_data": ["options_chain"],
+            }
+        }
+    )
+    analyst = strategy.model_copy(
+        update={
+            "journal_record_id": "jrnl_analyst",
+            "record_type": DecisionJournalRecordType.ANALYST_REVIEW,
+            "payload": {
+                "analysis": {
+                    "missing_context": ["Need management commentary."],
+                    "contradictions": [],
+                },
+                "status": "analyzed",
+            },
+        }
+    )
+    risk = strategy.model_copy(
+        update={
+            "journal_record_id": "jrnl_risk",
+            "record_type": DecisionJournalRecordType.RISK_DECISION,
+            "payload": {
+                "status": "rejected",
+                "rejection_reasons": ["daily_halt_active"],
+            },
+        }
+    )
+
+    result = adapter.append_decision_journal_records([strategy, analyst, risk])
+
+    assert result.ok is True
+    row = fake_client.upserts_by_table["decision_records"][0]
+    assert row["decision_record_id"] == "decision_attention"
+    assert row["attention_status"] == "needs_attention"
+    assert row["attention_reasons"] == [
+        "missing_data: options_chain",
+        "analyst_missing_context: Need management commentary.",
+        "risk_rejection: daily_halt_active",
+    ]
+
+
+def test_supabase_adapter_writes_system_health_records() -> None:
+    fake_client = FakeSupabaseClient()
+    adapter = SupabaseStorageAdapter(client=fake_client, schema="prescient_storage")
+    records = [
+        SystemHealthRecord(
+            component="market_data",
+            status=SystemHealthStatus.HEALTHY,
+            detail="Provider reads completed.",
+            latency_seconds=3.2,
+            run_id="scheduled:2026-06-01",
+            created_at=datetime(2026, 6, 1, 14, 31, tzinfo=timezone.utc),
+        )
+    ]
+
+    result = adapter.upsert_system_health(records)
+
+    assert result.ok is True
+    assert result.records_written == 1
+    assert fake_client.upserts_by_table["system_health"] == [
+        {
+            "system_health_id": "scheduled:2026-06-01:market_data",
+            "component": "market_data",
+            "status": "healthy",
+            "detail": "Provider reads completed.",
+            "latency_seconds": 3.2,
+            "run_id": "scheduled:2026-06-01",
+            "schema_version": 1,
+            "created_at": "2026-06-01T14:31:00Z",
+        }
+    ]
+    assert fake_client.conflicts_by_table["system_health"] == "system_health_id"
+
+
+def test_supabase_adapter_upserts_watchlist_seed_rows() -> None:
+    fake_client = FakeSupabaseClient()
+    adapter = SupabaseStorageAdapter(client=fake_client, schema="prescient_storage")
+
+    result = adapter.upsert_watchlist_seed_rows(
+        watchlists=[
+            {
+                "watchlist_id": "theme:AI_STORAGE",
+                "name": "AI STORAGE",
+                "description": "AI data center demand",
+                "source": "strategy_universe",
+                "schema_version": 1,
+            }
+        ],
+        items=[
+            {
+                "watchlist_item_id": "theme:AI_STORAGE:NTNX",
+                "watchlist_id": "theme:AI_STORAGE",
+                "ticker": "NTNX",
+                "theme": "AI_STORAGE",
+                "sort_order": 0,
+                "schema_version": 1,
+            }
+        ],
+    )
+
+    assert result.ok is True
+    assert result.records_written == 2
+    assert fake_client.upserts_by_table["watchlists"][0]["watchlist_id"] == (
+        "theme:AI_STORAGE"
+    )
+    assert fake_client.upserts_by_table["watchlist_items"][0]["ticker"] == "NTNX"
+    assert fake_client.conflicts_by_table["watchlists"] == "watchlist_id"
+    assert fake_client.conflicts_by_table["watchlist_items"] == "watchlist_item_id"
 
 
 def test_supabase_adapter_reads_rows_as_decision_journal_records() -> None:

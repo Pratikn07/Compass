@@ -10,6 +10,9 @@ export const DecisionListPayloadSchema = z
         target: z.string().optional(),
         theme: z.string().nullable().optional(),
         main_thesis: z.string().optional(),
+        earnings_date: z.string().optional(),
+        supporting_evidence: z.array(z.string()).optional(),
+        peer_signal_score: z.number().optional(),
       })
       .passthrough()
       .optional(),

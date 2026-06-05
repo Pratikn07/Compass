@@ -1,8 +1,8 @@
 import { Badge } from "@/components/ui/badge";
 import { Table, Td, Th } from "@/components/ui/table";
-import type { StorageAuditRow } from "@/lib/runs/schemas";
+import type { StorageAuditDisplayRow } from "@/lib/runs/status-view-model";
 
-export function StorageAuditTable({ rows }: { rows: StorageAuditRow[] }) {
+export function StorageAuditTable({ rows }: { rows: StorageAuditDisplayRow[] }) {
   return (
     <div>
       <h2 className="mb-3 text-base font-semibold">Storage writes</h2>
@@ -14,6 +14,7 @@ export function StorageAuditTable({ rows }: { rows: StorageAuditRow[] }) {
             <Th>Attempted</Th>
             <Th>Written</Th>
             <Th>Errors</Th>
+            <Th>Error rate</Th>
             <Th>Created</Th>
           </tr>
         </thead>
@@ -29,6 +30,7 @@ export function StorageAuditTable({ rows }: { rows: StorageAuditRow[] }) {
                   {row.errorCount}
                 </Badge>
               </Td>
+              <Td className="font-mono text-xs">{row.errorRateLabel}</Td>
               <Td className="whitespace-nowrap font-mono text-xs">{row.createdAt}</Td>
             </tr>
           ))}

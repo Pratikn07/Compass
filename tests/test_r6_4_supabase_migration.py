@@ -14,9 +14,21 @@ TABLES = [
     "storage_write_audit",
 ]
 
+SIDEBAR_TABLES = [
+    "watchlists",
+    "watchlist_items",
+    "system_health",
+]
+
 
 def _migration_sql() -> str:
     migrations = sorted(Path("supabase/migrations").glob("*r6_4_storage*.sql"))
+    assert len(migrations) == 1
+    return migrations[0].read_text(encoding="utf-8").lower()
+
+
+def _sidebar_migration_sql() -> str:
+    migrations = sorted(Path("supabase/migrations").glob("*runs_sidebar_filters*.sql"))
     assert len(migrations) == 1
     return migrations[0].read_text(encoding="utf-8").lower()
 
@@ -66,3 +78,40 @@ def test_r6_4_migration_has_required_query_indexes_without_privileged_code() -> 
     assert "security definer" not in sql
     assert "auth.role()" not in sql
     assert "create policy" not in sql
+
+
+def test_sidebar_filters_migration_adds_attention_and_health_contracts() -> None:
+    sql = _sidebar_migration_sql()
+
+    assert "alter table prescient_storage.decision_records" in sql
+    assert "attention_status text not null default 'normal'" in sql
+    assert "attention_reasons text[] not null default '{}'::text[]" in sql
+    assert "decision_records_attention_status_check" in sql
+    assert "normal" in sql
+    assert "needs_attention" in sql
+    assert "system_health_component_check" in sql
+    assert "market_data" in sql
+    assert "pricing_engine" in sql
+    assert "risk_engine" in sql
+    assert "system_health_status_check" in sql
+    assert "healthy" in sql
+    assert "degraded" in sql
+    assert "blocked" in sql
+    assert "unknown" in sql
+
+
+def test_sidebar_filters_migration_creates_read_only_sidebar_tables() -> None:
+    sql = _sidebar_migration_sql()
+
+    for table in SIDEBAR_TABLES:
+        assert f"create table if not exists prescient_storage.{table}" in sql
+        assert f"alter table prescient_storage.{table} enable row level security" in sql
+        assert f"create policy authenticated_read on prescient_storage.{table}" in sql
+        assert "for select to authenticated" in sql
+
+    assert "grant select on all tables in schema prescient_storage to authenticated" in sql
+    assert "grant insert" not in sql
+    assert "grant update" not in sql
+    assert "grant delete" not in sql
+    assert "security definer" not in sql
+    assert "auth.role()" not in sql

@@ -16,6 +16,8 @@ export type Database = {
     Tables: {
       decision_records: {
         Row: {
+          attention_reasons: string[]
+          attention_status: string
           created_at: string
           decision_id: string
           decision_index: number | null
@@ -31,6 +33,8 @@ export type Database = {
           trading_date: string
         }
         Insert: {
+          attention_reasons?: string[]
+          attention_status?: string
           created_at?: string
           decision_id: string
           decision_index?: number | null
@@ -46,6 +50,8 @@ export type Database = {
           trading_date: string
         }
         Update: {
+          attention_reasons?: string[]
+          attention_status?: string
           created_at?: string
           decision_id?: string
           decision_index?: number | null
@@ -59,6 +65,107 @@ export type Database = {
           target?: string | null
           theme?: string | null
           trading_date?: string
+        }
+        Relationships: []
+      }
+      system_health: {
+        Row: {
+          component: string
+          created_at: string
+          detail: string | null
+          latency_seconds: number | null
+          run_id: string | null
+          schema_version: number
+          status: string
+          system_health_id: string
+        }
+        Insert: {
+          component: string
+          created_at?: string
+          detail?: string | null
+          latency_seconds?: number | null
+          run_id?: string | null
+          schema_version?: number
+          status?: string
+          system_health_id: string
+        }
+        Update: {
+          component?: string
+          created_at?: string
+          detail?: string | null
+          latency_seconds?: number | null
+          run_id?: string | null
+          schema_version?: number
+          status?: string
+          system_health_id?: string
+        }
+        Relationships: []
+      }
+      watchlist_items: {
+        Row: {
+          created_at: string
+          schema_version: number
+          sort_order: number
+          theme: string | null
+          ticker: string
+          watchlist_id: string
+          watchlist_item_id: string
+        }
+        Insert: {
+          created_at?: string
+          schema_version?: number
+          sort_order?: number
+          theme?: string | null
+          ticker: string
+          watchlist_id: string
+          watchlist_item_id: string
+        }
+        Update: {
+          created_at?: string
+          schema_version?: number
+          sort_order?: number
+          theme?: string | null
+          ticker?: string
+          watchlist_id?: string
+          watchlist_item_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "watchlist_items_watchlist_id_fkey"
+            columns: ["watchlist_id"]
+            isOneToOne: false
+            referencedRelation: "watchlists"
+            referencedColumns: ["watchlist_id"]
+          },
+        ]
+      }
+      watchlists: {
+        Row: {
+          created_at: string
+          description: string | null
+          name: string
+          schema_version: number
+          source: string
+          updated_at: string
+          watchlist_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          name: string
+          schema_version?: number
+          source?: string
+          updated_at?: string
+          watchlist_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          name?: string
+          schema_version?: number
+          source?: string
+          updated_at?: string
+          watchlist_id?: string
         }
         Relationships: []
       }

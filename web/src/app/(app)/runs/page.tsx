@@ -1,13 +1,16 @@
 "use client";
 
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, CheckCircle2 } from "lucide-react";
 import { EmptyState } from "@/components/states/empty-state";
 import { ErrorState } from "@/components/states/error-state";
 import { LoadingState } from "@/components/states/loading-state";
 import { ModeAuthorizationPanel } from "@/components/runs/mode-authorization-panel";
 import { ProviderErrorsTable } from "@/components/runs/provider-errors-table";
+import { RecentRunsTable } from "@/components/runs/recent-runs-table";
 import { RunsSummaryCards } from "@/components/runs/runs-summary-cards";
 import { StorageAuditTable } from "@/components/runs/storage-audit-table";
+import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
 import { useOperatorStatus } from "@/lib/operator/hooks";
 import {
   useDailyHaltStatus,
@@ -15,6 +18,11 @@ import {
   useRecentProviderErrors,
   useRecentStorageAudit,
 } from "@/lib/runs/hooks";
+import {
+  buildRunsStatusViewModel,
+  type OperationalStatus,
+  type RunsStatusViewModel,
+} from "@/lib/runs/status-view-model";
 
 function queryIsLoading(query: { isLoading?: boolean; isPending?: boolean }) {
   return Boolean(query.isLoading || query.isPending);
@@ -68,7 +76,6 @@ export default function RunsPage() {
     return <ErrorState title="Operator status unavailable" />;
   }
 
-  const latestRun = runs.data?.[0] ?? null;
   const errors = providerErrors.data ?? [];
   const audits = storageAudit.data ?? [];
   const halt = dailyHalt.data ?? {
@@ -80,6 +87,13 @@ export default function RunsPage() {
     ...operatorStatus.data.warnings,
     ...operatorStatus.data.killSwitch.warnings,
   ];
+  const view = buildRunsStatusViewModel({
+    runs: runs.data ?? [],
+    providerErrors: errors,
+    storageAudit: audits,
+    dailyHalt: { status: halt.status, createdAt: halt.createdAt },
+    operatorStatus: operatorStatus.data,
+  });
 
   return (
     <section className="grid gap-6">
@@ -90,11 +104,13 @@ export default function RunsPage() {
         </p>
       </div>
 
+      <OperationalStatusStrip view={view} />
+
       <RunsSummaryCards
-        latestRun={latestRun}
+        latestRun={view.latestRun}
         operatorStatus={operatorStatus.data}
         dailyHalt={{ status: halt.status, createdAt: halt.createdAt }}
-        providerErrorCount={errors.length}
+        providerErrorCount={view.providerErrorCount}
       />
 
       {warnings.length ? (
@@ -108,7 +124,11 @@ export default function RunsPage() {
         latestModeAuthorization={operatorStatus.data.latestModeAuthorization}
       />
 
-      {runs.data?.length ? null : <EmptyState message="No runs have been recorded yet." />}
+      {view.recentRunRows.length ? (
+        <RecentRunsTable rows={view.recentRunRows} />
+      ) : (
+        <EmptyState message="No runs have been recorded yet." />
+      )}
 
       <div className="grid gap-6 xl:grid-cols-2">
         {errors.length ? (
@@ -116,12 +136,56 @@ export default function RunsPage() {
         ) : (
           <EmptyState message="No recent provider errors." />
         )}
-        {audits.length ? (
-          <StorageAuditTable rows={audits} />
+        {view.storageAuditRows.length ? (
+          <StorageAuditTable rows={view.storageAuditRows} />
         ) : (
           <EmptyState message="No recent storage write audit rows." />
         )}
       </div>
     </section>
   );
+}
+
+function OperationalStatusStrip({ view }: { view: RunsStatusViewModel }) {
+  const variant = badgeVariantForOperationalStatus(view.operationalStatus);
+  const Icon = view.operationalStatus === "clear" ? CheckCircle2 : AlertTriangle;
+
+  return (
+    <Card className="grid gap-3 p-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex items-start gap-3">
+          <span className="flex h-9 w-9 items-center justify-center rounded-md bg-muted text-muted-foreground">
+            <Icon className="h-4 w-4" aria-hidden="true" />
+          </span>
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Operational status
+            </p>
+            <div className="mt-1 flex items-center gap-2">
+              <Badge dot variant={variant}>
+                {view.operationalLabel}
+              </Badge>
+              <span className="text-sm text-muted-foreground">
+                Derived from current run, safety, provider, and storage records.
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <ul className="grid gap-1 text-sm text-muted-foreground sm:grid-cols-2">
+        {view.operationalReasons.map((reason) => (
+          <li key={reason} className="flex items-start gap-2">
+            <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-muted-foreground/60" />
+            <span>{reason}</span>
+          </li>
+        ))}
+      </ul>
+    </Card>
+  );
+}
+
+function badgeVariantForOperationalStatus(status: OperationalStatus) {
+  if (status === "blocked") return "danger" as const;
+  if (status === "attention") return "warning" as const;
+  return "success" as const;
 }

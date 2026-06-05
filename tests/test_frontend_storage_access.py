@@ -12,13 +12,15 @@ TABLES = [
     "provider_errors",
     "learning_reports",
     "storage_write_audit",
+    "watchlists",
+    "watchlist_items",
+    "system_health",
 ]
 
 
 def _frontend_access_sql() -> str:
-    migrations = sorted(Path("supabase/migrations").glob("*frontend_authenticated_read_access.sql"))
-    assert len(migrations) == 1
-    return migrations[0].read_text(encoding="utf-8").lower()
+    migrations = sorted(Path("supabase/migrations").glob("*.sql"))
+    return "\n".join(path.read_text(encoding="utf-8").lower() for path in migrations)
 
 
 def test_local_supabase_api_exposes_prescient_storage_schema() -> None:

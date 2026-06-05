@@ -18,13 +18,18 @@ function row(overrides: Partial<DecisionRecordRow> = {}): DecisionRecordRow {
     strategy_type: "bullish_earnings_readthrough",
     strategy_status: "candidate_ready_for_analyst",
     execution_mode: "propose_only",
+    attention_status: "normal",
+    attention_reasons: [],
     payload: {
       thesis: "Bullish AI_STORAGE read-through for NTNX.",
       decision_summary: "candidate_ready_for_analyst",
       candidate_brief: {
         target: "NTNX",
         theme: "AI_STORAGE",
+        earnings_date: "2026-06-02",
         main_thesis: "AI storage peers reported strong demand.",
+        peer_signal_score: 2.67,
+        supporting_evidence: ["4 of 5 peers reported positive AI storage demand."],
       },
     },
     schema_version: 1,
@@ -50,6 +55,11 @@ describe("parseDecisionList", () => {
         outcome: "pending",
         mode: "propose_only",
         thesis: "Bullish AI_STORAGE read-through for NTNX.",
+        earningsDate: "2026-06-02",
+        evidenceSummary: "4 of 5 peers reported positive AI storage demand.",
+        peerSignalScore: 2.67,
+        attentionStatus: "normal",
+        attentionReasons: [],
         malformed: false,
         rawPayload: null,
       },
@@ -63,7 +73,26 @@ describe("parseDecisionList", () => {
 
     expect(decisions[0].malformed).toBe(true);
     expect(decisions[0].status).toBe("malformed");
+    expect(decisions[0].earningsDate).toBeNull();
+    expect(decisions[0].evidenceSummary).toBeNull();
+    expect(decisions[0].peerSignalScore).toBeNull();
+    expect(decisions[0].attentionStatus).toBe("needs_attention");
+    expect(decisions[0].attentionReasons).toEqual(["malformed_payload"]);
     expect(decisions[0].rawPayload).toContain("42");
+  });
+
+  it("maps backend attention status and reasons", () => {
+    const decisions = parseDecisionList([
+      row({
+        attention_status: "needs_attention",
+        attention_reasons: ["risk_rejection: daily_halt_active"],
+      }),
+    ]);
+
+    expect(decisions[0].attentionStatus).toBe("needs_attention");
+    expect(decisions[0].attentionReasons).toEqual([
+      "risk_rejection: daily_halt_active",
+    ]);
   });
 
   it("derives no_trade outcome for rejected strategy statuses", () => {

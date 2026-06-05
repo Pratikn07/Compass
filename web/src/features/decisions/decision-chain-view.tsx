@@ -9,6 +9,13 @@ import {
   formatList,
   formatMoney,
 } from "./decision-chain-format";
+import {
+  buildAnalystReviewViewModel,
+  buildDecisionChainViewModel,
+  buildExecutionProposalViewModel,
+  buildPositionSizingViewModel,
+  buildStrategyEvidenceViewModel,
+} from "./decision-chain-view-model";
 import type {
   AnalystReviewPayload,
   DecisionChainRecord,
@@ -28,7 +35,8 @@ export function DecisionChainView({
   decisionId: string;
   records: DecisionChainRecord[];
 }) {
-  const metadata = firstRecordMetadata(records);
+  const view = buildDecisionChainViewModel(records);
+  const metadata = view.header;
 
   return (
     <section className="min-w-0 space-y-6">
@@ -47,6 +55,17 @@ export function DecisionChainView({
             <p className="mt-1 text-sm text-muted-foreground">
               Theme: {metadata.theme}
             </p>
+          </div>
+          <div
+            className="flex min-w-0 flex-wrap gap-2 pt-1"
+            data-testid="decision-chain-header-badges"
+          >
+            <HeaderBadge
+              label="Strategy status"
+              value={metadata.strategyStatus}
+            />
+            <HeaderBadge label="Latest outcome" value={metadata.outcome} />
+            <HeaderBadge label="Mode" value={metadata.executionMode} />
           </div>
         </div>
         <dl className="grid min-w-0 gap-2 text-sm md:min-w-72">
@@ -211,28 +230,115 @@ function StrategyContent({
   citations: SourceCitation[];
   payload: StrategyDecisionPayload;
 }) {
-  const candidate = payload.candidate_brief;
+  const evidence = buildStrategyEvidenceViewModel(payload);
 
   return (
     <div className="min-w-0 space-y-4 text-sm">
       <p className="break-words border-l-2 border-border-strong pl-3 text-[0.9375rem] leading-relaxed text-foreground">
-        {payload.thesis}
+        {evidence.thesis}
       </p>
-      <dl className="grid gap-3 sm:grid-cols-2">
-        <MetadataItem label="Status" value={payload.strategy_decision.status} />
-        <MetadataItem
-          label="Expression"
-          value={candidate?.recommended_expression ?? "unknown"}
-        />
-        <MetadataItem
-          label="Peer signal score"
-          value={String(candidate?.peer_signal_score ?? "unknown")}
-        />
-        <MetadataItem
-          label="Rejection reasons"
-          value={formatList(payload.rejection_reasons)}
-        />
-      </dl>
+      <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)_minmax(0,1.15fr)]">
+        <section className="min-w-0 space-y-3 border-t border-border pt-3">
+          <h3 className="text-sm font-semibold tracking-tight">
+            Trigger summary
+          </h3>
+          <dl className="grid gap-3">
+            <MetadataItem label="Status" value={evidence.status} />
+            <MetadataItem label="Earnings" value={evidence.earningsDate} />
+            <MetadataItem label="Report time" value={evidence.reportTime} />
+            <MetadataItem label="Direction" value={evidence.direction} />
+            <MetadataItem label="Expression" value={evidence.expression} />
+            <MetadataItem
+              label="Signal score"
+              value={evidence.peerSignalScoreLabel}
+            />
+            <MetadataItem
+              label="Positive peer ratio"
+              value={evidence.positivePeerRatioLabel}
+            />
+            <MetadataItem
+              label="Reported peers"
+              value={evidence.reportedPeersLabel}
+            />
+            <MetadataItem
+              label="Rejection reasons"
+              value={formatList(payload.rejection_reasons)}
+            />
+          </dl>
+        </section>
+        <section className="min-w-0 space-y-3 border-t border-border pt-3">
+          <h3 className="text-sm font-semibold tracking-tight">
+            Peer read-through evidence
+          </h3>
+          <EvidenceList
+            emptyLabel="No supporting evidence recorded."
+            values={evidence.supportingEvidence}
+          />
+          <div className="min-w-0 space-y-2">
+            <p className="text-[0.6875rem] font-semibold uppercase tracking-wide text-muted-foreground">
+              Contradictions
+            </p>
+            <EvidenceList
+              emptyLabel="No contradictions recorded."
+              values={evidence.contradictions}
+            />
+          </div>
+        </section>
+        <section className="min-w-0 space-y-3 border-t border-border pt-3">
+          <h3 className="text-sm font-semibold tracking-tight">Peer scores</h3>
+          {evidence.peerScores.length ? (
+            <div className="min-w-0 overflow-x-auto">
+              <table className="min-w-full border-separate border-spacing-0 text-left text-xs">
+                <caption className="sr-only">
+                  Strategy peer scores
+                </caption>
+                <thead className="text-muted-foreground">
+                  <tr>
+                    <th className="border-b border-border py-2 pr-3 font-medium">
+                      Peer
+                    </th>
+                    <th className="border-b border-border px-3 py-2 font-medium">
+                      Score
+                    </th>
+                    <th className="border-b border-border px-3 py-2 font-medium">
+                      Positive
+                    </th>
+                    <th className="border-b border-border px-3 py-2 font-medium">
+                      Negative
+                    </th>
+                    <th className="border-b border-border py-2 pl-3 font-medium">
+                      Missing
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {evidence.peerScores.map((peer) => (
+                    <tr key={peer.ticker}>
+                      <td className="border-b border-border/60 py-2 pr-3 font-mono font-medium">
+                        {peer.ticker}
+                      </td>
+                      <td className="border-b border-border/60 px-3 py-2 tabular-nums">
+                        {peer.scoreLabel}
+                      </td>
+                      <td className="border-b border-border/60 px-3 py-2">
+                        {peer.positiveFactorsLabel}
+                      </td>
+                      <td className="border-b border-border/60 px-3 py-2">
+                        {peer.negativeFactorsLabel}
+                      </td>
+                      <td className="border-b border-border/60 py-2 pl-3">
+                        {peer.missingFactorsLabel}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className="text-muted-foreground">No peer scores recorded.</p>
+          )}
+        </section>
+      </div>
       <SourceCitations citations={citations} />
     </div>
   );
@@ -245,6 +351,8 @@ function AnalystContent({
   citations: SourceCitation[];
   payload: AnalystReviewPayload;
 }) {
+  const analyst = buildAnalystReviewViewModel(payload);
+
   return (
     <div className="min-w-0 space-y-4 text-sm">
       <p className="flex items-center gap-2 rounded-md border border-border bg-muted/50 px-3 py-2 font-medium text-primary">
@@ -254,20 +362,32 @@ function AnalystContent({
       <dl className="grid gap-3 sm:grid-cols-2">
         <MetadataItem
           label="Recommendation"
-          value={payload.analysis?.recommendation ?? "unknown"}
+          value={analyst.recommendation}
         />
         <MetadataItem
-          label="Conviction"
-          value={
-            payload.analysis?.conviction_score == null
-              ? "unknown"
-              : String(payload.analysis.conviction_score)
-          }
+          label="Analyst conviction"
+          value={analyst.analystConvictionLabel}
+        />
+        <MetadataItem
+          label="Suggested expression"
+          value={analyst.suggestedExpression}
+        />
+        <MetadataItem
+          label="Cited citation ids"
+          value={analyst.citedCitationIdsLabel}
+        />
+        <MetadataItem
+          label="Missing context"
+          value={analyst.missingContextLabel}
+        />
+        <MetadataItem
+          label="Contradictions"
+          value={analyst.contradictionsLabel}
         />
       </dl>
-      {payload.analysis?.reasoning ? (
+      {analyst.reasoning ? (
         <p className="break-words text-muted-foreground">
-          {payload.analysis.reasoning}
+          {analyst.reasoning}
         </p>
       ) : null}
       <SourceCitations citations={citations} />
@@ -330,7 +450,7 @@ function PositionSizingContent({
   citations: SourceCitation[];
   payload: PositionSizingPayload;
 }) {
-  const sizing = payload.position_sizing_decision;
+  const sizing = buildPositionSizingViewModel(payload);
 
   return (
     <div className="min-w-0 space-y-4 text-sm">
@@ -339,21 +459,52 @@ function PositionSizingContent({
         Read-only. Quantity was code-decided.
       </p>
       <dl className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <MetadataItem label="Quantity" value={String(sizing.approved_quantity)} />
+        <MetadataItem
+          label="Quantity"
+          value={sizing.approvedQuantityLabel}
+        />
+        <MetadataItem
+          label="Account equity"
+          value={sizing.accountEquityLabel}
+        />
         <MetadataItem
           label="Risk budget"
-          value={formatMoney(sizing.risk_budget)}
+          value={sizing.riskBudgetLabel}
+        />
+        <MetadataItem
+          label="Unit max loss"
+          value={sizing.unitMaxLossLabel}
         />
         <MetadataItem
           label="Projected max loss"
-          value={formatMoney(sizing.projected_max_loss)}
+          value={sizing.projectedMaxLossLabel}
         />
         <MetadataItem
           label="Entry cost required"
-          value={formatMoney(sizing.entry_cost_required)}
+          value={sizing.entryCostRequiredLabel}
+        />
+        <MetadataItem
+          label="Warnings"
+          value={sizing.warningsLabel}
+        />
+        <MetadataItem
+          label="Rejection reasons"
+          value={sizing.rejectionReasonsLabel}
+        />
+        <MetadataItem
+          label="Claude present"
+          value={sizing.claudePresentLabel}
+        />
+        <MetadataItem
+          label="Claude sizing override attempted"
+          value={sizing.claudeSizingOverrideAttemptedLabel}
         />
       </dl>
-      <p className="break-words text-muted-foreground">{sizing.explanation}</p>
+      {sizing.explanation ? (
+        <p className="break-words text-muted-foreground">
+          {sizing.explanation}
+        </p>
+      ) : null}
       <SourceCitations citations={citations} />
     </div>
   );
@@ -364,7 +515,7 @@ function ExecutionProposalContent({
 }: {
   payload: ExecutionProposalPayload;
 }) {
-  const status = stringField(payload, "proposal_status");
+  const proposal = buildExecutionProposalViewModel(payload);
 
   return (
     <div className="min-w-0 space-y-4 text-sm">
@@ -372,13 +523,55 @@ function ExecutionProposalContent({
         <Lock className="h-4 w-4 shrink-0" aria-hidden="true" />
         Read-only execution proposal payload.
       </p>
-      {status ? (
+      {proposal.status ? (
         <p className="flex items-center gap-2">
           <span className="text-muted-foreground">Status:</span>
-          <Badge variant={badgeVariantForChainStatus(status)}>
-            {formatChainValue(status)}
+          <Badge variant={badgeVariantForChainStatus(proposal.status)}>
+            {formatChainValue(proposal.status)}
           </Badge>
         </p>
+      ) : null}
+      {proposal.legs.length ? (
+        <div className="min-w-0 space-y-3 border-t border-border pt-3">
+          <h3 className="text-sm font-semibold tracking-tight">
+            Available proposal legs
+          </h3>
+          <div className="min-w-0 overflow-x-auto">
+            <table className="min-w-full border-separate border-spacing-0 text-left text-xs">
+              <caption className="sr-only">
+                Available execution proposal leg fields
+              </caption>
+              <thead className="text-muted-foreground">
+                <tr>
+                  <th className="border-b border-border py-2 pr-3 font-medium">
+                    Side
+                  </th>
+                  <th className="border-b border-border px-3 py-2 font-medium">
+                    Symbol
+                  </th>
+                  <th className="border-b border-border py-2 pl-3 font-medium">
+                    Quantity
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {proposal.legs.map((leg, index) => (
+                  <tr key={`${leg.side}-${leg.symbol}-${index}`}>
+                    <td className="border-b border-border/60 py-2 pr-3">
+                      {leg.side}
+                    </td>
+                    <td className="border-b border-border/60 px-3 py-2 font-mono">
+                      {leg.symbol}
+                    </td>
+                    <td className="border-b border-border/60 py-2 pl-3 tabular-nums">
+                      {leg.quantity}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
       ) : null}
       <RawPayloadDetails label="Raw execution proposal" payload={payload} />
     </div>
@@ -421,6 +614,44 @@ function OutcomeContent({ payload }: { payload: TradeOutcomePayload }) {
         Reasons: {formatList(payload.outcome.outcome_reasons)}
       </p>
     </div>
+  );
+}
+
+function HeaderBadge({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex min-w-0 items-center gap-2 rounded-md border border-border bg-background px-2.5 py-1.5 text-xs">
+      <span className="shrink-0 font-medium text-muted-foreground">
+        {label}
+      </span>
+      <Badge dot variant={badgeVariantForChainStatus(value)}>
+        {formatChainValue(value)}
+      </Badge>
+    </div>
+  );
+}
+
+function EvidenceList({
+  emptyLabel,
+  values,
+}: {
+  emptyLabel: string;
+  values: string[];
+}) {
+  if (values.length === 0) {
+    return <p className="text-muted-foreground">{emptyLabel}</p>;
+  }
+
+  return (
+    <ul className="space-y-2">
+      {values.map((value) => (
+        <li
+          className="break-words border-l-2 border-border pl-3 text-foreground"
+          key={value}
+        >
+          {value}
+        </li>
+      ))}
+    </ul>
   );
 }
 
@@ -490,17 +721,6 @@ function getRecordStatus(record: DecisionChainRecord): string {
     case "outcome_correction":
       return (record.payload.data as TradeOutcomePayload).outcome.outcome_type;
   }
-}
-
-function firstRecordMetadata(records: DecisionChainRecord[]) {
-  const first = records.find(
-    (record) => record.row.target || record.row.theme || record.row.run_id,
-  )?.row;
-  return {
-    runId: first?.run_id ?? "unknown",
-    target: first?.target ?? "Unknown target",
-    theme: first?.theme ?? "unknown",
-  };
 }
 
 function stringField(

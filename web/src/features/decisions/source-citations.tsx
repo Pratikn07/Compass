@@ -36,9 +36,51 @@ export function SourceCitations({
                 ? ` - retrieved ${citation.retrieved_at}`
                 : ""}
             </p>
+            <dl className="mt-2 grid gap-1 text-xs text-muted-foreground sm:grid-cols-2">
+              {citation.confidence ? (
+                <CitationDetail
+                  label="Evidence confidence"
+                  value={citation.confidence}
+                />
+              ) : null}
+              {citation.source_endpoint ? (
+                <CitationDetail
+                  label="Endpoint"
+                  value={citation.source_endpoint}
+                />
+              ) : null}
+              {citation.source_id ? (
+                <CitationDetail label="Source id" value={citation.source_id} />
+              ) : null}
+              {citation.as_of ? (
+                <CitationDetail label="As of" value={citation.as_of} />
+              ) : null}
+              {citation.retrieved_at ? (
+                <CitationDetail
+                  label="Retrieved"
+                  value={citation.retrieved_at}
+                />
+              ) : null}
+            </dl>
+            {citation.excerpt ? (
+              <p className="mt-2 break-words border-l-2 border-border pl-3 text-xs text-foreground">
+                {citation.excerpt}
+              </p>
+            ) : null}
           </li>
         ))}
       </ul>
     </details>
+  );
+}
+
+function CitationDetail({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="min-w-0 break-words">
+      <dt className="sr-only">{label}</dt>
+      <dd>
+        {label}: {value}
+      </dd>
+    </div>
   );
 }

@@ -98,6 +98,53 @@ class StorageWriteResult(BaseModel):
             raise StorageWriteRequiredError(self.errors)
 
 
+class DecisionAttentionStatus(StrEnum):
+    NORMAL = "normal"
+    NEEDS_ATTENTION = "needs_attention"
+
+
+class SystemHealthComponent(StrEnum):
+    MARKET_DATA = "market_data"
+    PRICING_ENGINE = "pricing_engine"
+    RISK_ENGINE = "risk_engine"
+
+
+class SystemHealthStatus(StrEnum):
+    HEALTHY = "healthy"
+    DEGRADED = "degraded"
+    BLOCKED = "blocked"
+    UNKNOWN = "unknown"
+
+
+class SystemHealthRecord(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    component: SystemHealthComponent
+    status: SystemHealthStatus
+    detail: str | None = None
+    latency_seconds: float | None = None
+    run_id: str | None = None
+    created_at: datetime
+    schema_version: int = DEFAULT_STORAGE_SCHEMA_VERSION
+
+    @property
+    def system_health_id(self) -> str:
+        run_part = self.run_id or "global"
+        return f"{run_part}:{self.component.value}"
+
+    def to_row(self) -> dict[str, Any]:
+        return {
+            "system_health_id": self.system_health_id,
+            "component": self.component.value,
+            "status": self.status.value,
+            "detail": self.detail,
+            "latency_seconds": self.latency_seconds,
+            "run_id": self.run_id,
+            "schema_version": self.schema_version,
+            "created_at": _format_datetime(self.created_at),
+        }
+
+
 class StorageQuery(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
@@ -217,7 +264,12 @@ class StorageRecord(BaseModel):
             "created_at": _format_datetime(self.created_at),
         }
 
-    def to_decision_record_row(self) -> dict[str, Any] | None:
+    def to_decision_record_row(
+        self,
+        *,
+        attention_status: DecisionAttentionStatus = DecisionAttentionStatus.NORMAL,
+        attention_reasons: list[str] | None = None,
+    ) -> dict[str, Any] | None:
         if self.record_type != "strategy_decision":
             return None
         if self.decision_id is None or self.trading_date is None:
@@ -233,6 +285,8 @@ class StorageRecord(BaseModel):
             "strategy_type": self.strategy_type,
             "strategy_status": self.strategy_status,
             "execution_mode": self.execution_mode,
+            "attention_status": attention_status.value,
+            "attention_reasons": attention_reasons or [],
             "payload": self.payload,
             "schema_version": self.schema_version,
             "created_at": _format_datetime(self.created_at),

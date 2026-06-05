@@ -8,6 +8,7 @@ import type {
   ProviderErrorRow,
   RunRow,
   StorageAuditRow,
+  SystemHealthRow,
 } from "@/lib/runs/schemas";
 
 function operatorStatus(overrides: Partial<OperatorStatus> = {}): OperatorStatus {
@@ -81,12 +82,55 @@ function storageAudit(
   };
 }
 
+function systemHealth(
+  overrides: Partial<SystemHealthRow> = {},
+): SystemHealthRow {
+  return {
+    systemHealthId: "scheduled:2026-06-04:provider_health",
+    component: "provider_health",
+    status: "degraded",
+    detail: "1 provider issue recorded.",
+    latencySeconds: null,
+    runId: "scheduled:2026-06-04",
+    payload: {
+      providers: {
+        finnhub: {
+          requests: 1,
+          cache_hits: 2,
+          cache_misses: 1,
+          retries: 1,
+          errors: 0,
+          budget_used: 3,
+          budget_limit: 50,
+          last_success_at: "2026-06-04T12:00:00Z",
+          warnings: [],
+        },
+        alpha_vantage: {
+          requests: 0,
+          cache_hits: 0,
+          cache_misses: 1,
+          retries: 0,
+          errors: 1,
+          budget_used: 20,
+          budget_limit: 20,
+          last_success_at: null,
+          warnings: ["Provider budget exhausted."],
+        },
+      },
+    },
+    schemaVersion: 1,
+    createdAt: "2026-06-04T12:00:00Z",
+    ...overrides,
+  };
+}
+
 describe("runs status view model", () => {
   it("returns blocked when safety controls stop the system", () => {
     const view = buildRunsStatusViewModel({
       runs: [run()],
       providerErrors: [],
       storageAudit: [],
+      systemHealth: [],
       dailyHalt: { status: "halted", createdAt: "2026-06-04T12:00:00Z" },
       operatorStatus: operatorStatus({
         killSwitch: {
@@ -114,6 +158,7 @@ describe("runs status view model", () => {
       runs: [run({ status: "failed" })],
       providerErrors: [providerError()],
       storageAudit: [storageAudit()],
+      systemHealth: [],
       dailyHalt: { status: "allowed", createdAt: null },
       operatorStatus: operatorStatus(),
     });
@@ -130,6 +175,7 @@ describe("runs status view model", () => {
       runs: [],
       providerErrors: [],
       storageAudit: [],
+      systemHealth: [],
       dailyHalt: { status: "allowed", createdAt: null },
       operatorStatus: operatorStatus(),
     });
@@ -143,6 +189,7 @@ describe("runs status view model", () => {
       runs: [run()],
       providerErrors: [],
       storageAudit: [storageAudit({ errorCount: 0, writtenRecordCount: 10 })],
+      systemHealth: [],
       dailyHalt: { status: "allowed", createdAt: null },
       operatorStatus: operatorStatus(),
     });
@@ -169,6 +216,7 @@ describe("runs status view model", () => {
           errorCount: 0,
         }),
       ],
+      systemHealth: [],
       dailyHalt: { status: "allowed", createdAt: null },
       operatorStatus: operatorStatus(),
     });
@@ -183,5 +231,47 @@ describe("runs status view model", () => {
       "n/a",
     ]);
     expect(formatStorageErrorRate(2, 8)).toBe("25%");
+  });
+
+  it("derives provider-health rows and attention from system health payloads", () => {
+    const view = buildRunsStatusViewModel({
+      runs: [run()],
+      providerErrors: [],
+      storageAudit: [],
+      systemHealth: [systemHealth()],
+      dailyHalt: { status: "allowed", createdAt: null },
+      operatorStatus: operatorStatus(),
+    });
+
+    expect(view.operationalStatus).toBe("attention");
+    expect(view.operationalReasons).toContain(
+      "Provider health is degraded: 1 provider issue recorded.",
+    );
+    expect(view.providerHealthRows).toEqual([
+      {
+        provider: "alpha_vantage",
+        status: "blocked",
+        requests: 0,
+        cacheHits: 0,
+        cacheMisses: 1,
+        retries: 0,
+        errors: 1,
+        budgetLabel: "20 / 20",
+        lastSuccessAt: null,
+        warnings: ["Provider budget exhausted."],
+      },
+      {
+        provider: "finnhub",
+        status: "healthy",
+        requests: 1,
+        cacheHits: 2,
+        cacheMisses: 1,
+        retries: 1,
+        errors: 0,
+        budgetLabel: "3 / 50",
+        lastSuccessAt: "2026-06-04T12:00:00Z",
+        warnings: [],
+      },
+    ]);
   });
 });

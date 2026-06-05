@@ -156,6 +156,101 @@ def test_cli_scheduler_cron_guard_records_bounded_run(tmp_path: Path, capsys) ->
     assert row == ("completed", "propose_only")
 
 
+def test_cli_live_data_run_uses_current_date_and_universe_path(monkeypatch, capsys) -> None:
+    from prescient import live_data
+
+    calls: list[dict[str, object]] = []
+
+    def fake_run_live_data_pipeline(**kwargs: object) -> object:
+        calls.append(kwargs)
+
+        class _Summary:
+            run_id = "scheduled:2026-06-01"
+            decision_count = 1
+            provider_error_count = 0
+            skipped_target_count = 0
+            wrote_storage = True
+
+        return _Summary()
+
+    monkeypatch.setattr(live_data, "run_live_data_pipeline", fake_run_live_data_pipeline)
+
+    exit_code = main(
+        [
+            "live-data-run",
+            "--current-date",
+            "2026-06-01",
+            "--universe-path",
+            "config/themes.yaml",
+            "--storage-write-policy",
+            "required",
+        ]
+    )
+
+    assert exit_code == 0
+    assert calls == [
+        {
+            "current_date": date(2026, 6, 1),
+            "universe_path": "config/themes.yaml",
+            "storage_write_policy": "required",
+        }
+    ]
+    output = capsys.readouterr().out
+    assert "live-data-run: scheduled:2026-06-01" in output
+    assert "decisions: 1" in output
+
+
+def test_cli_live_data_run_returns_nonzero_for_secret_safe_config_error(
+    monkeypatch,
+    capsys,
+) -> None:
+    from prescient import live_data
+
+    def fake_run_live_data_pipeline(**kwargs: object) -> object:
+        raise live_data.LiveDataConfigurationError(
+            "Missing mandatory live-data provider configuration: fmp"
+        )
+
+    monkeypatch.setattr(live_data, "run_live_data_pipeline", fake_run_live_data_pipeline)
+
+    exit_code = main(["live-data-run", "--current-date", "2026-06-01"])
+
+    output = capsys.readouterr().out
+    assert exit_code == 1
+    assert "Missing mandatory live-data provider configuration: fmp" in output
+    assert "secret" not in output.lower()
+
+
+def test_cli_live_data_run_returns_nonzero_for_secret_safe_storage_error(
+    monkeypatch,
+    capsys,
+) -> None:
+    from prescient import live_data
+    from prescient.storage import (
+        StorageConfigurationError,
+        StorageError,
+        StorageErrorType,
+    )
+
+    def fake_run_live_data_pipeline(**kwargs: object) -> object:
+        raise StorageConfigurationError(
+            StorageError(
+                provider="supabase",
+                error_type=StorageErrorType.MISSING_CREDENTIALS,
+                message="Missing Supabase storage configuration.",
+            )
+        )
+
+    monkeypatch.setattr(live_data, "run_live_data_pipeline", fake_run_live_data_pipeline)
+
+    exit_code = main(["live-data-run", "--current-date", "2026-06-01"])
+
+    output = capsys.readouterr().out
+    assert exit_code == 1
+    assert "Missing Supabase storage configuration." in output
+    assert "service_role" not in output.lower()
+
+
 def _mark_started_for_test(database_path: Path, job_name: str, run_key: str) -> int:
     with sqlite3.connect(database_path) as connection:
         connection.execute(

@@ -134,6 +134,33 @@ def test_legacy_peers_list_response_shape_is_accepted() -> None:
     assert result.snapshots[0].peers == ["MSFT", "NVDA", "ASML"]
 
 
+def test_current_flat_peer_row_response_shape_is_accepted() -> None:
+    # FMP's current /stable/stock-peers returns a flat list where each row IS a
+    # peer company (symbol/companyName/price/mktCap), with no nested peers field
+    # and no row for the queried symbol itself. Verified live 2026-06.
+    client = FakeHttpClient(
+        FakeHttpResponse(
+            payload=[
+                {"symbol": "GOOGL", "companyName": "Alphabet Inc.", "price": 372.19,
+                 "mktCap": 4501589774352},
+                {"symbol": "META", "companyName": "Meta Platforms, Inc.", "price": 627.57,
+                 "mktCap": 1593038276492},
+                {"symbol": "MSFT", "companyName": "Microsoft Corporation", "price": 428.05,
+                 "mktCap": 3179739461500},
+            ]
+        )
+    )
+    adapter = FmpStockPeersAdapter(api_key="secret-key", http_client=client)
+
+    result = adapter.get_stock_peers("aapl")
+
+    assert result.errors == []
+    assert len(result.snapshots) == 1
+    snapshot = result.snapshots[0]
+    assert snapshot.ticker == "AAPL"  # the queried symbol
+    assert snapshot.peers == ["GOOGL", "META", "MSFT"]  # the flat rows are the peers
+
+
 def test_bulk_response_normalizes_multiple_peer_snapshots() -> None:
     client = FakeHttpClient(
         FakeHttpResponse(

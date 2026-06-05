@@ -10,6 +10,9 @@ import pytest
 from prescient.runtime.models import DecisionJournalRecord, DecisionJournalRecordType
 from prescient.storage import (
     JsonlStorageAdapter,
+    ProviderErrorRecord,
+    ProviderSnapshotRecord,
+    RunStatusRecord,
     SystemHealthRecord,
     SystemHealthStatus,
     StorageConfigurationError,
@@ -279,11 +282,16 @@ def test_supabase_adapter_writes_system_health_records() -> None:
     adapter = SupabaseStorageAdapter(client=fake_client, schema="prescient_storage")
     records = [
         SystemHealthRecord(
-            component="market_data",
+            component="provider_health",
             status=SystemHealthStatus.HEALTHY,
             detail="Provider reads completed.",
             latency_seconds=3.2,
             run_id="scheduled:2026-06-01",
+            payload={
+                "providers": {
+                    "finnhub": {"cache_hits": 2, "errors": 0, "requests": 1}
+                }
+            },
             created_at=datetime(2026, 6, 1, 14, 31, tzinfo=timezone.utc),
         )
     ]
@@ -294,17 +302,151 @@ def test_supabase_adapter_writes_system_health_records() -> None:
     assert result.records_written == 1
     assert fake_client.upserts_by_table["system_health"] == [
         {
-            "system_health_id": "scheduled:2026-06-01:market_data",
-            "component": "market_data",
+            "system_health_id": "scheduled:2026-06-01:provider_health",
+            "component": "provider_health",
             "status": "healthy",
             "detail": "Provider reads completed.",
             "latency_seconds": 3.2,
             "run_id": "scheduled:2026-06-01",
+            "payload": {
+                "providers": {
+                    "finnhub": {"cache_hits": 2, "errors": 0, "requests": 1}
+                }
+            },
             "schema_version": 1,
             "created_at": "2026-06-01T14:31:00Z",
         }
     ]
     assert fake_client.conflicts_by_table["system_health"] == "system_health_id"
+
+
+def test_supabase_adapter_upserts_explicit_run_status() -> None:
+    fake_client = FakeSupabaseClient()
+    adapter = SupabaseStorageAdapter(client=fake_client, schema="prescient_storage")
+    record = RunStatusRecord(
+        run_id="scheduled:2026-06-01",
+        trigger_type="scheduled",
+        scheduled_date=date(2026, 6, 1),
+        current_date=date(2026, 6, 1),
+        window_start=date(2026, 6, 1),
+        window_end=date(2026, 6, 15),
+        status="completed_with_provider_warnings",
+        payload={"source": "live_data_run", "provider_error_count": 1},
+        created_at=datetime(2026, 6, 1, tzinfo=timezone.utc),
+    )
+
+    result = adapter.upsert_run_status(record)
+
+    assert result.ok is True
+    assert result.records_written == 1
+    assert fake_client.upserts_by_table["runs"] == [
+        {
+            "run_id": "scheduled:2026-06-01",
+            "trigger_type": "scheduled",
+            "scheduled_date": "2026-06-01",
+            "current_date": "2026-06-01",
+            "window_start": "2026-06-01",
+            "window_end": "2026-06-15",
+            "status": "completed_with_provider_warnings",
+            "payload": {"source": "live_data_run", "provider_error_count": 1},
+            "schema_version": 1,
+            "created_at": "2026-06-01T00:00:00Z",
+        }
+    ]
+    assert fake_client.conflicts_by_table["runs"] == "run_id"
+
+
+def test_supabase_adapter_writes_provider_snapshot_and_error_records() -> None:
+    fake_client = FakeSupabaseClient()
+    adapter = SupabaseStorageAdapter(client=fake_client, schema="prescient_storage")
+    snapshot = ProviderSnapshotRecord(
+        provider="finnhub",
+        target="NTNX",
+        theme="AI_STORAGE",
+        source_endpoint="earnings_calendar",
+        source_url=None,
+        source_id="earnings_calendar:NTNX:2026-06-02",
+        as_of=date(2026, 6, 1),
+        retrieved_at=datetime(2026, 6, 1, 13, 0, tzinfo=timezone.utc),
+        payload={"ticker": "NTNX"},
+    )
+    error = ProviderErrorRecord(
+        provider="finnhub",
+        error_type="rate_limited",
+        run_id="scheduled:2026-06-01",
+        target="NTNX",
+        source="earnings_calendar",
+        message="Finnhub request was rate limited.",
+        payload={"retry_after_seconds": 30},
+        created_at=datetime(2026, 6, 1, 13, 1, tzinfo=timezone.utc),
+    )
+
+    snapshot_result = adapter.append_provider_snapshots([snapshot])
+    error_result = adapter.append_provider_errors([error])
+
+    assert snapshot_result.ok is True
+    assert error_result.ok is True
+    assert fake_client.upserts_by_table["provider_snapshots"] == [
+        {
+            "provider_snapshot_id": (
+                "finnhub:earnings_calendar:earnings_calendar:NTNX:2026-06-02"
+            ),
+            "provider": "finnhub",
+            "target": "NTNX",
+            "theme": "AI_STORAGE",
+            "source_endpoint": "earnings_calendar",
+            "source_url": None,
+            "source_id": "earnings_calendar:NTNX:2026-06-02",
+            "as_of": "2026-06-01",
+            "retrieved_at": "2026-06-01T13:00:00Z",
+            "payload": {"ticker": "NTNX"},
+            "schema_version": 1,
+            "created_at": "2026-06-01T13:00:00Z",
+        }
+    ]
+    assert fake_client.conflicts_by_table["provider_snapshots"] == "provider_snapshot_id"
+    assert fake_client.upserts_by_table["provider_errors"] == [
+        {
+            "provider_error_id": "scheduled:2026-06-01:finnhub:earnings_calendar:NTNX",
+            "provider": "finnhub",
+            "error_type": "rate_limited",
+            "run_id": "scheduled:2026-06-01",
+            "target": "NTNX",
+            "source": "earnings_calendar",
+            "message": "Finnhub request was rate limited.",
+            "payload": {"retry_after_seconds": 30},
+            "schema_version": 1,
+            "created_at": "2026-06-01T13:01:00Z",
+        }
+    ]
+    assert fake_client.conflicts_by_table["provider_errors"] == "provider_error_id"
+
+
+def test_supabase_adapter_reads_latest_provider_snapshot_by_source_id() -> None:
+    row = ProviderSnapshotRecord(
+        provider="finnhub",
+        source_endpoint="earnings_calendar",
+        source_id="earnings_calendar:NTNX:2026-06-02",
+        retrieved_at=datetime(2026, 6, 1, 13, 0, tzinfo=timezone.utc),
+        payload={"ticker": "NTNX"},
+    ).to_row()
+    fake_client = FakeSupabaseClient(read_rows=[row])
+    adapter = SupabaseStorageAdapter(client=fake_client, schema="prescient_storage")
+
+    snapshot = adapter.read_provider_snapshot(
+        provider="finnhub",
+        source_id="earnings_calendar:NTNX:2026-06-02",
+    )
+
+    assert snapshot is not None
+    assert snapshot.provider == "finnhub"
+    assert snapshot.payload == {"ticker": "NTNX"}
+    assert fake_client.table_name == "provider_snapshots"
+    assert fake_client.filters == [
+        ("eq", "provider", "finnhub"),
+        ("eq", "source_id", "earnings_calendar:NTNX:2026-06-02"),
+        ("limit", "limit", 1),
+    ]
 
 
 def test_supabase_adapter_upserts_watchlist_seed_rows() -> None:

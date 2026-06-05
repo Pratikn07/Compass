@@ -9,11 +9,30 @@ from __future__ import annotations
 
 from typing import Any
 
+import httpx
+
 from prescient.data.alpha_vantage import AlphaVantageNewsSentimentAdapter
 from prescient.data.config import ProviderConfig
-from prescient.data.finnhub import FinnhubEarningsAdapter, _DefaultHttpClient
-from prescient.data.fmp import FmpStockPeersAdapter
+from prescient.data.finnhub import FinnhubEarningsAdapter
+from prescient.data.fmp import FmpMarketDataAdapter, FmpStockPeersAdapter
 from prescient.data.sec_edgar import SecEdgarFundamentalsAdapter
+
+
+class _SecHttpClient:
+    """Default transport for the SEC adapter, which passes a `headers` kwarg
+    (User-Agent is required by SEC). The Finnhub/FMP default clients do not accept
+    headers, so SEC needs its own.
+    """
+
+    def get(
+        self,
+        url: str,
+        *,
+        params: dict[str, Any] | None = None,
+        headers: dict[str, str] | None = None,
+        timeout: float = 10.0,
+    ) -> httpx.Response:
+        return httpx.get(url, params=params or {}, headers=headers or {}, timeout=timeout)
 
 
 def build_finnhub_adapter(
@@ -40,6 +59,18 @@ def build_fmp_adapter(
     )
 
 
+def build_fmp_market_data_adapter(
+    config: ProviderConfig,
+    http_client: Any | None = None,
+) -> FmpMarketDataAdapter | None:
+    if not config.has("fmp"):
+        return None
+    return FmpMarketDataAdapter(
+        api_key=config.fmp_api_key,
+        http_client=http_client,
+    )
+
+
 def build_alpha_vantage_adapter(
     config: ProviderConfig,
     http_client: Any | None = None,
@@ -58,9 +89,9 @@ def build_sec_edgar_adapter(
 ) -> SecEdgarFundamentalsAdapter | None:
     if not config.has("sec_edgar"):
         return None
-    # SEC adapter requires an http_client (no internal default); reuse the shared
-    # httpx-backed default transport when the caller doesn't supply one.
-    client = http_client if http_client is not None else _DefaultHttpClient()
+    # SEC adapter requires an http_client that accepts a `headers` kwarg (it sends
+    # the required User-Agent). Use the SEC-specific default when none is supplied.
+    client = http_client if http_client is not None else _SecHttpClient()
     return SecEdgarFundamentalsAdapter(
         user_agent=config.sec_edgar_user_agent or "",
         http_client=client,

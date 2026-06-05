@@ -5,10 +5,11 @@ from typing import Any
 from prescient.data.alpha_vantage import AlphaVantageNewsSentimentAdapter
 from prescient.data.config import ProviderConfig
 from prescient.data.finnhub import FinnhubEarningsAdapter
-from prescient.data.fmp import FmpStockPeersAdapter
+from prescient.data.fmp import FmpMarketDataAdapter, FmpStockPeersAdapter
 from prescient.data.providers import (
     build_alpha_vantage_adapter,
     build_finnhub_adapter,
+    build_fmp_market_data_adapter,
     build_fmp_adapter,
     build_sec_edgar_adapter,
 )
@@ -42,6 +43,11 @@ def test_build_fmp_adapter_when_key_present() -> None:
     assert isinstance(adapter, FmpStockPeersAdapter)
 
 
+def test_build_fmp_market_data_adapter_when_key_present() -> None:
+    adapter = build_fmp_market_data_adapter(_full_config(), http_client=_FakeHttp())
+    assert isinstance(adapter, FmpMarketDataAdapter)
+
+
 def test_build_alpha_vantage_adapter_when_key_present() -> None:
     adapter = build_alpha_vantage_adapter(_full_config(), http_client=_FakeHttp())
     assert isinstance(adapter, AlphaVantageNewsSentimentAdapter)
@@ -57,5 +63,6 @@ def test_builders_return_none_when_credential_absent() -> None:
     empty = ProviderConfig.from_env({})
     assert build_finnhub_adapter(empty, http_client=_FakeHttp()) is None
     assert build_fmp_adapter(empty, http_client=_FakeHttp()) is None
+    assert build_fmp_market_data_adapter(empty, http_client=_FakeHttp()) is None
     assert build_alpha_vantage_adapter(empty, http_client=_FakeHttp()) is None
     assert build_sec_edgar_adapter(empty, http_client=_FakeHttp()) is None

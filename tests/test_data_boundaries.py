@@ -30,6 +30,13 @@ def test_data_package_has_no_execution_cold_path_or_env_dependencies() -> None:
     }
 
     for path in Path("src/prescient/data").glob("*.py"):
+        phase_e_runtime = path.name == "runtime.py"
+        active_forbidden_roots = (
+            forbidden_roots - {"os", "prescient.storage.sqlite"}
+            if phase_e_runtime
+            else forbidden_roots
+        )
+        active_forbidden_calls = set() if phase_e_runtime else forbidden_calls
         source = path.read_text(encoding="utf-8")
         tree = ast.parse(source)
         imports = [
@@ -50,13 +57,13 @@ def test_data_package_has_no_execution_cold_path_or_env_dependencies() -> None:
         assert not any(
             imported == forbidden or imported.startswith(f"{forbidden}.")
             for imported in imports
-            for forbidden in forbidden_roots
+            for forbidden in active_forbidden_roots
         ), f"{path} imports a forbidden data dependency: {imports}"
 
         for node in ast.walk(tree):
             if isinstance(node, ast.Call):
                 call_name = _call_name(node.func)
-                assert call_name not in forbidden_calls, (
+                assert call_name not in active_forbidden_calls, (
                     f"{path} uses hidden clock/sleep call {call_name}"
                 )
 

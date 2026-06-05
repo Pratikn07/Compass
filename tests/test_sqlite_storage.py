@@ -5,7 +5,14 @@ from datetime import date, datetime, timezone
 from pathlib import Path
 
 from prescient.runtime.models import DecisionJournalRecord, DecisionJournalRecordType
-from prescient.storage import SQLiteStorageAdapter, StorageQuery
+from prescient.storage import (
+    ProviderErrorRecord,
+    ProviderSnapshotRecord,
+    SQLiteStorageAdapter,
+    SystemHealthRecord,
+    SystemHealthStatus,
+    StorageQuery,
+)
 
 
 def _record(
@@ -146,6 +153,85 @@ def test_sqlite_storage_upserts_duplicate_journal_ids(tmp_path: Path) -> None:
     assert second_result.records_written == 1
     assert len(records) == 1
     assert records[0].payload == {"version": 2}
+
+
+def test_sqlite_storage_writes_and_reads_provider_snapshots_by_source_id(
+    tmp_path: Path,
+) -> None:
+    adapter = SQLiteStorageAdapter(tmp_path / "prescient.sqlite")
+    older = ProviderSnapshotRecord(
+        provider="finnhub",
+        source_endpoint="earnings_calendar",
+        source_id="earnings_calendar:NTNX",
+        retrieved_at=datetime(2026, 6, 1, 13, tzinfo=timezone.utc),
+        payload={"ticker": "OLD"},
+    )
+    newer = ProviderSnapshotRecord(
+        provider="finnhub",
+        source_endpoint="earnings_calendar",
+        source_id="earnings_calendar:NTNX",
+        retrieved_at=datetime(2026, 6, 1, 14, tzinfo=timezone.utc),
+        payload={"ticker": "NTNX"},
+    )
+
+    result = adapter.append_provider_snapshots([older, newer])
+    snapshot = adapter.read_provider_snapshot(
+        provider="finnhub",
+        source_id="earnings_calendar:NTNX",
+    )
+
+    assert result.ok is True
+    assert result.records_written == 2
+    assert snapshot is not None
+    assert snapshot.payload == {"ticker": "NTNX"}
+
+
+def test_sqlite_storage_writes_provider_errors_and_health_payload(
+    tmp_path: Path,
+) -> None:
+    adapter = SQLiteStorageAdapter(tmp_path / "prescient.sqlite")
+    error_result = adapter.append_provider_errors(
+        [
+            ProviderErrorRecord(
+                provider="finnhub",
+                error_type="rate_limited",
+                run_id="scheduled:2026-06-01",
+                source="earnings_calendar",
+                message="rate limited",
+                payload={"retry_after_seconds": 30},
+                created_at=datetime(2026, 6, 1, 13, tzinfo=timezone.utc),
+            )
+        ]
+    )
+    health_result = adapter.upsert_system_health(
+        [
+            SystemHealthRecord(
+                component="provider_health",
+                status=SystemHealthStatus.DEGRADED,
+                detail="Provider warnings recorded.",
+                run_id="scheduled:2026-06-01",
+                payload={"providers": {"finnhub": {"errors": 1}}},
+                created_at=datetime(2026, 6, 1, 13, tzinfo=timezone.utc),
+            )
+        ]
+    )
+
+    assert error_result.ok is True
+    assert health_result.ok is True
+    with sqlite3.connect(tmp_path / "prescient.sqlite") as connection:
+        provider_error = connection.execute(
+            "SELECT provider, error_type, payload FROM provider_errors"
+        ).fetchone()
+        health = connection.execute(
+            "SELECT component, status, payload FROM system_health"
+        ).fetchone()
+
+    assert provider_error[0] == "finnhub"
+    assert provider_error[1] == "rate_limited"
+    assert '"retry_after_seconds":30' in provider_error[2]
+    assert health[0] == "provider_health"
+    assert health[1] == "degraded"
+    assert '"errors":1' in health[2]
 
 
 def test_sqlite_storage_serialized_rows_do_not_leak_sensitive_terms(

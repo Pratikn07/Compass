@@ -11,7 +11,7 @@ from prescient.data.finnhub import (
     to_completed_peer_events,
     to_upcoming_calendar_events,
 )
-from prescient.data.fmp import FmpStockPeersAdapter, FmpTranscriptAdapter
+from prescient.data.fmp import FmpMarketDataAdapter, FmpStockPeersAdapter, FmpTranscriptAdapter
 from prescient.data.sec_edgar import SecEdgarFundamentalsAdapter
 from prescient.data.financial_datasets import FinancialDatasetsFundamentalsAdapter
 from prescient.data.daloopa import DaloopaFundamentalsAdapter
@@ -36,6 +36,8 @@ from prescient.data.models import (
     NewsTopicSentiment,
     PeerListResult,
     PeerListSnapshot,
+    HistoricalPriceCandle,
+    HistoricalPriceResult,
     XBRLMetric,
     CompanyFactsResult,
     SecFiling,
@@ -115,6 +117,17 @@ class NewsSentimentProvider(Protocol):
         limit: int | None = None,
         fetched_at: datetime | None = None,
     ) -> NewsSentimentResult:
+        ...
+
+
+class MarketDataProvider(Protocol):
+    def get_historical_prices(
+        self,
+        ticker: str,
+        date_from: date,
+        date_to: date,
+        fetched_at: datetime | None = None,
+    ) -> HistoricalPriceResult:
         ...
 
 
@@ -208,6 +221,10 @@ NEWS_PROVIDERS: dict[str, Any] = {
     "alpha_vantage": AlphaVantageNewsSentimentAdapter,
 }
 
+MARKET_DATA_PROVIDERS: dict[str, Any] = {
+    "fmp": FmpMarketDataAdapter,
+}
+
 FUNDAMENTALS_PROVIDERS: dict[str, Any] = {
     "sec_edgar": SecEdgarFundamentalsAdapter,
     "financial_datasets": FinancialDatasetsFundamentalsAdapter,
@@ -242,6 +259,15 @@ def get_news_provider(name: str, **kwargs: Any) -> NewsSentimentProvider:
     if name not in NEWS_PROVIDERS:
         raise ValueError(f"Unknown news provider: {name}. Supported: {list(NEWS_PROVIDERS.keys())}")
     return NEWS_PROVIDERS[name](**kwargs)
+
+
+def get_market_data_provider(name: str, **kwargs: Any) -> MarketDataProvider:
+    if name not in MARKET_DATA_PROVIDERS:
+        raise ValueError(
+            f"Unknown market data provider: {name}. "
+            f"Supported: {list(MARKET_DATA_PROVIDERS.keys())}"
+        )
+    return MARKET_DATA_PROVIDERS[name](**kwargs)
 
 
 def get_fundamentals_provider(name: str, **kwargs: Any) -> FundamentalsProvider:
@@ -287,6 +313,7 @@ __all__ = [
     "RevenueEstimateResult",
     "RevenueEstimateSnapshot",
     "FinnhubEarningsAdapter",
+    "FmpMarketDataAdapter",
     "FmpStockPeersAdapter",
     "FmpTranscriptAdapter",
     "GptTranscriptSummarizer",
@@ -301,6 +328,8 @@ __all__ = [
     "NewsTopicSentiment",
     "PeerListResult",
     "PeerListSnapshot",
+    "HistoricalPriceCandle",
+    "HistoricalPriceResult",
     "XBRLMetric",
     "CompanyFactsResult",
     "SecFiling",
@@ -323,18 +352,21 @@ __all__ = [
     "EarningsProvider",
     "PeerListProvider",
     "NewsSentimentProvider",
+    "MarketDataProvider",
     "FundamentalsProvider",
     "TranscriptProvider",
     "TranscriptSummarizer",
     "EARNINGS_PROVIDERS",
     "PEER_PROVIDERS",
     "NEWS_PROVIDERS",
+    "MARKET_DATA_PROVIDERS",
     "FUNDAMENTALS_PROVIDERS",
     "TRANSCRIPT_PROVIDERS",
     "SUMMARIZER_PROVIDERS",
     "get_earnings_provider",
     "get_peer_provider",
     "get_news_provider",
+    "get_market_data_provider",
     "get_fundamentals_provider",
     "get_transcript_provider",
     "get_summarizer_provider",

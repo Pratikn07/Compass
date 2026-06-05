@@ -1,5 +1,12 @@
 import { z } from "zod";
 
+const payloadSchema = z.unknown().transform((value): Record<string, unknown> => {
+  if (value && typeof value === "object" && !Array.isArray(value)) {
+    return value as Record<string, unknown>;
+  }
+  return {};
+});
+
 export const watchlistRowSchema = z
   .object({
     watchlist_id: z.string(),
@@ -43,11 +50,17 @@ export const watchlistItemRowSchema = z
 export const systemHealthRowSchema = z
   .object({
     system_health_id: z.string(),
-    component: z.enum(["market_data", "pricing_engine", "risk_engine"]),
+    component: z.enum([
+      "market_data",
+      "pricing_engine",
+      "risk_engine",
+      "provider_health",
+    ]),
     status: z.enum(["healthy", "degraded", "blocked", "unknown"]),
     detail: z.string().nullable(),
     latency_seconds: z.number().nullable(),
     run_id: z.string().nullable(),
+    payload: payloadSchema.default({}),
     schema_version: z.number(),
     created_at: z.string(),
   })
@@ -58,6 +71,7 @@ export const systemHealthRowSchema = z
     detail: value.detail,
     latencySeconds: value.latency_seconds,
     runId: value.run_id,
+    payload: value.payload,
     schemaVersion: value.schema_version,
     createdAt: value.created_at,
   }));

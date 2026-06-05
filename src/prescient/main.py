@@ -20,6 +20,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     if args.command != "kill-switch":
         if args.command == "scheduler":
             return _handle_scheduler_command(args)
+        if args.command == "seed-run":
+            return _handle_seed_run_command(args)
         parser.print_help()
         return 2
 
@@ -74,6 +76,24 @@ def _handle_scheduler_command(args: argparse.Namespace) -> int:
     print(f"{args.command_label}: {result.status.value}")
     print(f"message: {result.message}")
     return result.exit_code
+
+
+def _handle_seed_run_command(args: argparse.Namespace) -> int:
+    from prescient.seed import run_seed_pipeline
+
+    current_date = (
+        date.fromisoformat(args.current_date)
+        if args.current_date
+        else date.today()
+    )
+    summary = run_seed_pipeline(
+        current_date=current_date,
+        storage_write_policy=args.storage_write_policy,
+    )
+    print(f"seed-run: {summary.run_id}")
+    print(f"decisions: {summary.decision_count}")
+    print(f"wrote_storage: {summary.wrote_storage}")
+    return 0
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -131,6 +151,17 @@ def _build_parser() -> argparse.ArgumentParser:
     cron_guard.add_argument("--database-path", required=True)
     cron_guard.add_argument("--command-label", required=True)
     cron_guard.add_argument("--execution-mode", default="propose_only")
+
+    seed_run = subparsers.add_parser(
+        "seed-run",
+        help="Run the propose-only pipeline over curated seed inputs and store results.",
+    )
+    seed_run.add_argument(
+        "--current-date",
+        default=None,
+        help="ISO date for the run (defaults to today).",
+    )
+    seed_run.add_argument("--storage-write-policy", default="required")
 
     return parser
 

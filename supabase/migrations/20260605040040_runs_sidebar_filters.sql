@@ -48,22 +48,28 @@ create table if not exists prescient_storage.system_health (
     detail text,
     latency_seconds double precision,
     run_id text,
+    payload jsonb not null default '{}'::jsonb,
     schema_version integer not null default 1,
     created_at timestamptz not null default now()
 );
 
+alter table prescient_storage.system_health
+    add column if not exists payload jsonb not null default '{}'::jsonb;
+
+alter table prescient_storage.system_health
+    drop constraint if exists system_health_component_check;
+
+alter table prescient_storage.system_health
+    add constraint system_health_component_check
+    check (component in (
+        'market_data',
+        'provider_health',
+        'pricing_engine',
+        'risk_engine'
+    ));
+
 do $$
 begin
-    if not exists (
-        select 1
-        from pg_constraint
-        where conname = 'system_health_component_check'
-    ) then
-        alter table prescient_storage.system_health
-            add constraint system_health_component_check
-            check (component in ('market_data', 'pricing_engine', 'risk_engine'));
-    end if;
-
     if not exists (
         select 1
         from pg_constraint

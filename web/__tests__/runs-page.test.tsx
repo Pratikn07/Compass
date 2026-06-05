@@ -62,6 +62,37 @@ const mockState = vi.hoisted(() => ({
       },
     ],
   },
+  systemHealth: {
+    isError: false,
+    isLoading: false,
+    data: [
+      {
+        systemHealthId: "scheduled:2026-06-04:provider_health",
+        component: "provider_health",
+        status: "degraded",
+        detail: "1 provider issue recorded.",
+        latencySeconds: null,
+        runId: "scheduled:2026-06-04",
+        payload: {
+          providers: {
+            finnhub: {
+              requests: 1,
+              cache_hits: 2,
+              cache_misses: 1,
+              retries: 1,
+              errors: 0,
+              budget_used: 3,
+              budget_limit: 50,
+              last_success_at: "2026-06-04T12:00:00Z",
+              warnings: [],
+            },
+          },
+        },
+        schemaVersion: 1,
+        createdAt: "2026-06-04T12:00:00Z",
+      },
+    ],
+  },
   operatorStatus: {
     isError: false,
     isLoading: false,
@@ -95,6 +126,7 @@ vi.mock("@/lib/runs/hooks", () => ({
   useLatestRuns: () => mockState.latestRuns,
   useRecentProviderErrors: () => mockState.providerErrors,
   useRecentStorageAudit: () => mockState.storageAudit,
+  useRecentSystemHealth: () => mockState.systemHealth,
 }));
 
 vi.mock("@/lib/operator/hooks", () => ({
@@ -165,6 +197,37 @@ describe("/runs page", () => {
         },
       ],
     };
+    mockState.systemHealth = {
+      isError: false,
+      isLoading: false,
+      data: [
+        {
+          systemHealthId: "scheduled:2026-06-04:provider_health",
+          component: "provider_health",
+          status: "degraded",
+          detail: "1 provider issue recorded.",
+          latencySeconds: null,
+          runId: "scheduled:2026-06-04",
+          payload: {
+            providers: {
+              finnhub: {
+                requests: 1,
+                cache_hits: 2,
+                cache_misses: 1,
+                retries: 1,
+                errors: 0,
+                budget_used: 3,
+                budget_limit: 50,
+                last_success_at: "2026-06-04T12:00:00Z",
+                warnings: [],
+              },
+            },
+          },
+          schemaVersion: 1,
+          createdAt: "2026-06-04T12:00:00Z",
+        },
+      ],
+    };
     mockState.operatorStatus = {
       isError: false,
       isLoading: false,
@@ -203,6 +266,10 @@ describe("/runs page", () => {
     expect(screen.getByRole("columnheader", { name: "Decision records" })).toBeInTheDocument();
     expect(screen.getAllByText("scheduled:2026-06-04").length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText("rate_limited")).toBeInTheDocument();
+    expect(screen.getByText("Provider health")).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Cache hits" })).toBeInTheDocument();
+    expect(screen.getAllByText("finnhub").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText("3 / 50")).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "Error rate" })).toBeInTheDocument();
     expect(screen.getByText("10%")).toBeInTheDocument();
     expect(screen.getByText("propose_only")).toBeInTheDocument();
@@ -234,6 +301,11 @@ describe("/runs page", () => {
           createdAt: "2026-06-04T12:06:00Z",
         },
       ],
+    };
+    mockState.systemHealth = {
+      isError: false,
+      isLoading: false,
+      data: [],
     };
 
     render(<RunsPage />);

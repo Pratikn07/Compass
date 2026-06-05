@@ -22,6 +22,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             return _handle_scheduler_command(args)
         if args.command == "seed-run":
             return _handle_seed_run_command(args)
+        if args.command == "live-data-run":
+            return _handle_live_data_run_command(args)
         parser.print_help()
         return 2
 
@@ -96,6 +98,36 @@ def _handle_seed_run_command(args: argparse.Namespace) -> int:
     return 0
 
 
+def _handle_live_data_run_command(args: argparse.Namespace) -> int:
+    from prescient import live_data
+    from prescient.storage import StorageConfigurationError, StorageWriteRequiredError
+
+    current_date = (
+        date.fromisoformat(args.current_date)
+        if args.current_date
+        else date.today()
+    )
+    try:
+        summary = live_data.run_live_data_pipeline(
+            current_date=current_date,
+            universe_path=args.universe_path,
+            storage_write_policy=args.storage_write_policy,
+        )
+    except (
+        live_data.LiveDataConfigurationError,
+        StorageConfigurationError,
+        StorageWriteRequiredError,
+    ) as exc:
+        print(f"live-data-run failed: {exc}")
+        return 1
+    print(f"live-data-run: {summary.run_id}")
+    print(f"decisions: {summary.decision_count}")
+    print(f"provider_errors: {summary.provider_error_count}")
+    print(f"skipped_targets: {summary.skipped_target_count}")
+    print(f"wrote_storage: {summary.wrote_storage}")
+    return 0
+
+
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="prescient")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -162,6 +194,22 @@ def _build_parser() -> argparse.ArgumentParser:
         help="ISO date for the run (defaults to today).",
     )
     seed_run.add_argument("--storage-write-policy", default="required")
+
+    live_data_run = subparsers.add_parser(
+        "live-data-run",
+        help="Run the propose-only pipeline over live provider-assembled inputs.",
+    )
+    live_data_run.add_argument(
+        "--current-date",
+        default=None,
+        help="ISO date for the run (defaults to today).",
+    )
+    live_data_run.add_argument(
+        "--universe-path",
+        default="config/themes.yaml",
+        help="Path to the strategy universe YAML file.",
+    )
+    live_data_run.add_argument("--storage-write-policy", default="required")
 
     return parser
 

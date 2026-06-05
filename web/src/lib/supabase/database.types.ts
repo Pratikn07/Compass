@@ -74,6 +74,7 @@ export type Database = {
           created_at: string
           detail: string | null
           latency_seconds: number | null
+          payload: Json
           run_id: string | null
           schema_version: number
           status: string
@@ -84,6 +85,7 @@ export type Database = {
           created_at?: string
           detail?: string | null
           latency_seconds?: number | null
+          payload?: Json
           run_id?: string | null
           schema_version?: number
           status?: string
@@ -94,6 +96,7 @@ export type Database = {
           created_at?: string
           detail?: string | null
           latency_seconds?: number | null
+          payload?: Json
           run_id?: string | null
           schema_version?: number
           status?: string

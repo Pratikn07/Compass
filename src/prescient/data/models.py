@@ -85,6 +85,38 @@ class PeerListResult(BaseModel):
     errors: list[DataProviderError] = Field(default_factory=list)
 
 
+class HistoricalPriceCandle(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    ticker: str
+    trading_date: date
+    open: float | None = None
+    high: float | None = None
+    low: float | None = None
+    close: float
+    volume: int | None = None
+    vwap: float | None = None
+    change: float | None = None
+    change_percent: float | None = None
+    provider: DataProvider
+    source_endpoint: str
+    provider_notes: list[str] = Field(default_factory=list)
+    fetched_at: datetime | None = None
+    source_citations: list[SourceCitation] = Field(default_factory=list)
+
+    @field_validator("ticker")
+    @classmethod
+    def normalize_ticker(cls, value: str) -> str:
+        return value.strip().upper()
+
+
+class HistoricalPriceResult(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    candles: list[HistoricalPriceCandle] = Field(default_factory=list)
+    errors: list[DataProviderError] = Field(default_factory=list)
+
+
 class EarningsCalendarSnapshot(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 

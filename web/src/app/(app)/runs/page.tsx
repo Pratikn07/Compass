@@ -6,6 +6,7 @@ import { ErrorState } from "@/components/states/error-state";
 import { LoadingState } from "@/components/states/loading-state";
 import { ModeAuthorizationPanel } from "@/components/runs/mode-authorization-panel";
 import { ProviderErrorsTable } from "@/components/runs/provider-errors-table";
+import { ProviderHealthTable } from "@/components/runs/provider-health-table";
 import { RecentRunsTable } from "@/components/runs/recent-runs-table";
 import { RunsSummaryCards } from "@/components/runs/runs-summary-cards";
 import { StorageAuditTable } from "@/components/runs/storage-audit-table";
@@ -17,6 +18,7 @@ import {
   useLatestRuns,
   useRecentProviderErrors,
   useRecentStorageAudit,
+  useRecentSystemHealth,
 } from "@/lib/runs/hooks";
 import {
   buildRunsStatusViewModel,
@@ -42,6 +44,7 @@ export default function RunsPage() {
   const runs = useLatestRuns();
   const providerErrors = useRecentProviderErrors();
   const storageAudit = useRecentStorageAudit();
+  const systemHealth = useRecentSystemHealth();
   const dailyHalt = useDailyHaltStatus();
   const operatorStatus = useOperatorStatus();
 
@@ -49,6 +52,7 @@ export default function RunsPage() {
     queryIsLoading(runs) ||
     queryIsLoading(providerErrors) ||
     queryIsLoading(storageAudit) ||
+    queryIsLoading(systemHealth) ||
     queryIsLoading(dailyHalt) ||
     queryIsLoading(operatorStatus);
 
@@ -56,6 +60,7 @@ export default function RunsPage() {
     runs.error ??
     providerErrors.error ??
     storageAudit.error ??
+    systemHealth.error ??
     dailyHalt.error ??
     operatorStatus.error;
 
@@ -91,6 +96,7 @@ export default function RunsPage() {
     runs: runs.data ?? [],
     providerErrors: errors,
     storageAudit: audits,
+    systemHealth: systemHealth.data ?? [],
     dailyHalt: { status: halt.status, createdAt: halt.createdAt },
     operatorStatus: operatorStatus.data,
   });
@@ -128,6 +134,12 @@ export default function RunsPage() {
         <RecentRunsTable rows={view.recentRunRows} />
       ) : (
         <EmptyState message="No runs have been recorded yet." />
+      )}
+
+      {view.providerHealthRows.length ? (
+        <ProviderHealthTable rows={view.providerHealthRows} />
+      ) : (
+        <EmptyState message="No provider health recorded." />
       )}
 
       <div className="grid gap-6 xl:grid-cols-2">

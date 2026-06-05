@@ -6,6 +6,7 @@ import {
   fetchLatestRuns,
   fetchRecentProviderErrors,
   fetchRecentStorageAudit,
+  fetchRecentSystemHealth,
 } from "@/lib/runs/queries";
 
 export function useLatestRuns() {
@@ -28,6 +29,14 @@ export function useRecentStorageAudit() {
   return useQuery({
     queryKey: ["runs", "storage-audit"],
     queryFn: () => fetchRecentStorageAudit(10),
+    refetchOnWindowFocus: true,
+  });
+}
+
+export function useRecentSystemHealth() {
+  return useQuery({
+    queryKey: ["runs", "system-health"],
+    queryFn: () => fetchRecentSystemHealth(20),
     refetchOnWindowFocus: true,
   });
 }

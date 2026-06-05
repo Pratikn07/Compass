@@ -4,6 +4,7 @@ import {
   providerErrorRowSchema,
   runRowSchema,
   storageAuditRowSchema,
+  systemHealthRowSchema,
 } from "@/lib/runs/schemas";
 
 export async function fetchLatestRuns(limit = 10) {
@@ -46,6 +47,20 @@ export async function fetchRecentStorageAudit(limit = 10) {
     throw new Error(`Failed to load storage audit: ${error.message}`);
   }
   return storageAuditRowSchema.array().parse(data ?? []);
+}
+
+export async function fetchRecentSystemHealth(limit = 20) {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from("system_health")
+    .select("*")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    throw new Error(`Failed to load system health: ${error.message}`);
+  }
+  return systemHealthRowSchema.array().parse(data ?? []);
 }
 
 export async function fetchDailyHaltStatus() {

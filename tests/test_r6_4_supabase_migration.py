@@ -91,6 +91,7 @@ def test_sidebar_filters_migration_adds_attention_and_health_contracts() -> None
     assert "needs_attention" in sql
     assert "system_health_component_check" in sql
     assert "market_data" in sql
+    assert "provider_health" in sql
     assert "pricing_engine" in sql
     assert "risk_engine" in sql
     assert "system_health_status_check" in sql
@@ -98,6 +99,7 @@ def test_sidebar_filters_migration_adds_attention_and_health_contracts() -> None
     assert "degraded" in sql
     assert "blocked" in sql
     assert "unknown" in sql
+    assert "payload jsonb not null default '{}'::jsonb" in sql
 
 
 def test_sidebar_filters_migration_creates_read_only_sidebar_tables() -> None:

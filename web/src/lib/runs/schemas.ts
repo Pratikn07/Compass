@@ -7,6 +7,37 @@ const payloadSchema = z.unknown().transform((value): Record<string, unknown> => 
   return {};
 });
 
+const providerHealthPayloadSchema = z.preprocess(
+  (value) => {
+    if (value && typeof value === "object" && !Array.isArray(value)) {
+      return value;
+    }
+    return {};
+  },
+  z
+    .object({
+      providers: z
+        .record(
+          z.string(),
+          z
+            .object({
+              requests: z.number().optional(),
+              cache_hits: z.number().optional(),
+              cache_misses: z.number().optional(),
+              retries: z.number().optional(),
+              errors: z.number().optional(),
+              budget_used: z.number().optional(),
+              budget_limit: z.number().optional(),
+              last_success_at: z.string().nullable().optional(),
+              warnings: z.array(z.string()).optional(),
+            })
+            .passthrough(),
+        )
+        .default({}),
+    })
+    .passthrough(),
+);
+
 export const runRowSchema = z
   .object({
     run_id: z.string(),
@@ -85,6 +116,35 @@ export const storageAuditRowSchema = z
     createdAt: value.created_at,
   }));
 
+export const systemHealthRowSchema = z
+  .object({
+    system_health_id: z.string(),
+    component: z.enum([
+      "market_data",
+      "pricing_engine",
+      "risk_engine",
+      "provider_health",
+    ]),
+    status: z.enum(["healthy", "degraded", "blocked", "unknown"]),
+    detail: z.string().nullable(),
+    latency_seconds: z.number().nullable(),
+    run_id: z.string().nullable(),
+    payload: providerHealthPayloadSchema.default({ providers: {} }),
+    schema_version: z.number(),
+    created_at: z.string(),
+  })
+  .transform((value) => ({
+    systemHealthId: value.system_health_id,
+    component: value.component,
+    status: value.status,
+    detail: value.detail,
+    latencySeconds: value.latency_seconds,
+    runId: value.run_id,
+    payload: value.payload,
+    schemaVersion: value.schema_version,
+    createdAt: value.created_at,
+  }));
+
 const riskJournalRecordSchema = z.object({
   journal_record_id: z.string(),
   record_type: z.literal("risk_decision"),
@@ -133,3 +193,4 @@ export function dailyHaltFromRiskRecords(records: unknown[]) {
 export type RunRow = z.infer<typeof runRowSchema>;
 export type ProviderErrorRow = z.infer<typeof providerErrorRowSchema>;
 export type StorageAuditRow = z.infer<typeof storageAuditRowSchema>;
+export type SystemHealthRow = z.infer<typeof systemHealthRowSchema>;

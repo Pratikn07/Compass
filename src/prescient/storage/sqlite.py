@@ -7,7 +7,15 @@ from pathlib import Path
 from typing import Any
 
 from prescient.runtime.models import DecisionJournalRecord
-from prescient.storage.models import StorageQuery, StorageRecord, StorageWriteResult
+from prescient.storage.models import (
+    ProviderErrorRecord,
+    ProviderSnapshotRecord,
+    RunStatusRecord,
+    SystemHealthRecord,
+    StorageQuery,
+    StorageRecord,
+    StorageWriteResult,
+)
 
 
 class SQLiteStorageAdapter:
@@ -58,6 +66,77 @@ class SQLiteStorageAdapter:
                     ON journal_records ({column})
                     """
                 )
+            connection.execute(
+                """
+                CREATE TABLE IF NOT EXISTS runs (
+                    run_id TEXT PRIMARY KEY,
+                    trigger_type TEXT,
+                    scheduled_date TEXT,
+                    current_date TEXT,
+                    window_start TEXT,
+                    window_end TEXT,
+                    status TEXT,
+                    payload TEXT NOT NULL,
+                    schema_version INTEGER NOT NULL,
+                    created_at TEXT NOT NULL
+                )
+                """
+            )
+            connection.execute(
+                """
+                CREATE TABLE IF NOT EXISTS provider_snapshots (
+                    provider_snapshot_id TEXT PRIMARY KEY,
+                    provider TEXT NOT NULL,
+                    target TEXT,
+                    theme TEXT,
+                    source_endpoint TEXT,
+                    source_url TEXT,
+                    source_id TEXT,
+                    as_of TEXT,
+                    retrieved_at TEXT,
+                    payload TEXT NOT NULL,
+                    schema_version INTEGER NOT NULL,
+                    created_at TEXT NOT NULL
+                )
+                """
+            )
+            connection.execute(
+                """
+                CREATE INDEX IF NOT EXISTS idx_provider_snapshots_provider_source_id
+                ON provider_snapshots (provider, source_id, retrieved_at DESC)
+                """
+            )
+            connection.execute(
+                """
+                CREATE TABLE IF NOT EXISTS provider_errors (
+                    provider_error_id TEXT PRIMARY KEY,
+                    provider TEXT NOT NULL,
+                    error_type TEXT NOT NULL,
+                    run_id TEXT,
+                    target TEXT,
+                    source TEXT,
+                    message TEXT NOT NULL,
+                    payload TEXT NOT NULL,
+                    schema_version INTEGER NOT NULL,
+                    created_at TEXT NOT NULL
+                )
+                """
+            )
+            connection.execute(
+                """
+                CREATE TABLE IF NOT EXISTS system_health (
+                    system_health_id TEXT PRIMARY KEY,
+                    component TEXT NOT NULL,
+                    status TEXT NOT NULL,
+                    detail TEXT,
+                    latency_seconds REAL,
+                    run_id TEXT,
+                    payload TEXT NOT NULL,
+                    schema_version INTEGER NOT NULL,
+                    created_at TEXT NOT NULL
+                )
+                """
+            )
 
     def append_decision_journal_records(
         self,
@@ -140,6 +219,204 @@ class SQLiteStorageAdapter:
             )
         return StorageWriteResult(records_written=len(rows))
 
+    def upsert_run_status(self, record: RunStatusRecord) -> StorageWriteResult:
+        self.initialize_schema()
+        with sqlite3.connect(self.path) as connection:
+            connection.execute(
+                """
+                INSERT INTO runs (
+                    run_id,
+                    trigger_type,
+                    scheduled_date,
+                    current_date,
+                    window_start,
+                    window_end,
+                    status,
+                    payload,
+                    schema_version,
+                    created_at
+                ) VALUES (
+                    :run_id,
+                    :trigger_type,
+                    :scheduled_date,
+                    :current_date,
+                    :window_start,
+                    :window_end,
+                    :status,
+                    :payload_json,
+                    :schema_version,
+                    :created_at
+                )
+                ON CONFLICT(run_id) DO UPDATE SET
+                    trigger_type = excluded.trigger_type,
+                    scheduled_date = excluded.scheduled_date,
+                    current_date = excluded.current_date,
+                    window_start = excluded.window_start,
+                    window_end = excluded.window_end,
+                    status = excluded.status,
+                    payload = excluded.payload,
+                    schema_version = excluded.schema_version,
+                    created_at = excluded.created_at
+                """,
+                _sqlite_row(record.to_row()),
+            )
+        return StorageWriteResult(records_written=1)
+
+    def append_provider_snapshots(
+        self,
+        snapshots: Iterable[ProviderSnapshotRecord | dict[str, object]],
+    ) -> StorageWriteResult:
+        records = [_provider_snapshot_record(snapshot) for snapshot in snapshots]
+        rows = [record.to_row() for record in records]
+        if not rows:
+            return StorageWriteResult(records_written=0)
+
+        self.initialize_schema()
+        with sqlite3.connect(self.path) as connection:
+            connection.executemany(
+                """
+                INSERT INTO provider_snapshots (
+                    provider_snapshot_id,
+                    provider,
+                    target,
+                    theme,
+                    source_endpoint,
+                    source_url,
+                    source_id,
+                    as_of,
+                    retrieved_at,
+                    payload,
+                    schema_version,
+                    created_at
+                ) VALUES (
+                    :provider_snapshot_id,
+                    :provider,
+                    :target,
+                    :theme,
+                    :source_endpoint,
+                    :source_url,
+                    :source_id,
+                    :as_of,
+                    :retrieved_at,
+                    :payload_json,
+                    :schema_version,
+                    :created_at
+                )
+                ON CONFLICT(provider_snapshot_id) DO UPDATE SET
+                    provider = excluded.provider,
+                    target = excluded.target,
+                    theme = excluded.theme,
+                    source_endpoint = excluded.source_endpoint,
+                    source_url = excluded.source_url,
+                    source_id = excluded.source_id,
+                    as_of = excluded.as_of,
+                    retrieved_at = excluded.retrieved_at,
+                    payload = excluded.payload,
+                    schema_version = excluded.schema_version,
+                    created_at = excluded.created_at
+                """,
+                [_sqlite_row(row) for row in rows],
+            )
+        return StorageWriteResult(records_written=len(rows))
+
+    def append_provider_errors(
+        self,
+        errors: Iterable[ProviderErrorRecord | dict[str, object]],
+    ) -> StorageWriteResult:
+        records = [_provider_error_record(error) for error in errors]
+        rows = [record.to_row() for record in records]
+        if not rows:
+            return StorageWriteResult(records_written=0)
+
+        self.initialize_schema()
+        with sqlite3.connect(self.path) as connection:
+            connection.executemany(
+                """
+                INSERT INTO provider_errors (
+                    provider_error_id,
+                    provider,
+                    error_type,
+                    run_id,
+                    target,
+                    source,
+                    message,
+                    payload,
+                    schema_version,
+                    created_at
+                ) VALUES (
+                    :provider_error_id,
+                    :provider,
+                    :error_type,
+                    :run_id,
+                    :target,
+                    :source,
+                    :message,
+                    :payload_json,
+                    :schema_version,
+                    :created_at
+                )
+                ON CONFLICT(provider_error_id) DO UPDATE SET
+                    provider = excluded.provider,
+                    error_type = excluded.error_type,
+                    run_id = excluded.run_id,
+                    target = excluded.target,
+                    source = excluded.source,
+                    message = excluded.message,
+                    payload = excluded.payload,
+                    schema_version = excluded.schema_version,
+                    created_at = excluded.created_at
+                """,
+                [_sqlite_row(row) for row in rows],
+            )
+        return StorageWriteResult(records_written=len(rows))
+
+    def upsert_system_health(
+        self,
+        records: Iterable[SystemHealthRecord],
+    ) -> StorageWriteResult:
+        rows = [record.to_row() for record in records]
+        if not rows:
+            return StorageWriteResult(records_written=0)
+
+        self.initialize_schema()
+        with sqlite3.connect(self.path) as connection:
+            connection.executemany(
+                """
+                INSERT INTO system_health (
+                    system_health_id,
+                    component,
+                    status,
+                    detail,
+                    latency_seconds,
+                    run_id,
+                    payload,
+                    schema_version,
+                    created_at
+                ) VALUES (
+                    :system_health_id,
+                    :component,
+                    :status,
+                    :detail,
+                    :latency_seconds,
+                    :run_id,
+                    :payload_json,
+                    :schema_version,
+                    :created_at
+                )
+                ON CONFLICT(system_health_id) DO UPDATE SET
+                    component = excluded.component,
+                    status = excluded.status,
+                    detail = excluded.detail,
+                    latency_seconds = excluded.latency_seconds,
+                    run_id = excluded.run_id,
+                    payload = excluded.payload,
+                    schema_version = excluded.schema_version,
+                    created_at = excluded.created_at
+                """,
+                [_sqlite_row(row) for row in rows],
+            )
+        return StorageWriteResult(records_written=len(rows))
+
     def read_decision_journal_records(
         self,
         query: StorageQuery | None = None,
@@ -174,6 +451,27 @@ class SQLiteStorageAdapter:
             rows = connection.execute(sql, params).fetchall()
 
         return [_record_from_row(row) for row in rows]
+
+    def read_provider_snapshot(
+        self,
+        *,
+        provider: str,
+        source_id: str,
+    ) -> ProviderSnapshotRecord | None:
+        self.initialize_schema()
+        with sqlite3.connect(self.path) as connection:
+            connection.row_factory = sqlite3.Row
+            row = connection.execute(
+                """
+                SELECT * FROM provider_snapshots
+                WHERE provider = ? AND source_id = ?
+                ORDER BY retrieved_at DESC, created_at DESC
+                LIMIT 1
+                """,
+                (provider.strip().lower(), source_id),
+            ).fetchone()
+
+        return _provider_snapshot_from_row(row) if row is not None else None
 
 
 def _sqlite_row(row: dict[str, Any]) -> dict[str, Any]:
@@ -215,5 +513,43 @@ def _record_from_row(row: sqlite3.Row) -> DecisionJournalRecord:
             "parent_record_id": row["parent_record_id"],
             "duplicate_of_record_id": row["duplicate_of_record_id"],
             "payload": json.loads(row["payload"]),
+        }
+    )
+
+
+def _provider_snapshot_record(
+    value: ProviderSnapshotRecord | dict[str, object],
+) -> ProviderSnapshotRecord:
+    if isinstance(value, ProviderSnapshotRecord):
+        return value
+    data = dict(value)
+    data.pop("provider_snapshot_id", None)
+    return ProviderSnapshotRecord.model_validate(data)
+
+
+def _provider_error_record(
+    value: ProviderErrorRecord | dict[str, object],
+) -> ProviderErrorRecord:
+    if isinstance(value, ProviderErrorRecord):
+        return value
+    data = dict(value)
+    data.pop("provider_error_id", None)
+    return ProviderErrorRecord.model_validate(data)
+
+
+def _provider_snapshot_from_row(row: sqlite3.Row) -> ProviderSnapshotRecord:
+    return ProviderSnapshotRecord.model_validate(
+        {
+            "provider": row["provider"],
+            "target": row["target"],
+            "theme": row["theme"],
+            "source_endpoint": row["source_endpoint"],
+            "source_url": row["source_url"],
+            "source_id": row["source_id"],
+            "as_of": row["as_of"],
+            "retrieved_at": row["retrieved_at"],
+            "payload": json.loads(row["payload"]),
+            "schema_version": row["schema_version"],
+            "created_at": row["created_at"],
         }
     )

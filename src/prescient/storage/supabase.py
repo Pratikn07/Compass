@@ -7,6 +7,9 @@ from typing import Any, Protocol, cast
 from prescient.runtime.models import DecisionJournalRecord
 from prescient.storage.models import (
     DecisionAttentionStatus,
+    ProviderErrorRecord,
+    ProviderSnapshotRecord,
+    RunStatusRecord,
     SystemHealthRecord,
     SystemHealthStatus,
     StorageConfigurationError,
@@ -152,6 +155,61 @@ class SupabaseStorageAdapter:
 
         return StorageWriteResult(records_written=len(rows))
 
+    def upsert_run_status(
+        self,
+        record: RunStatusRecord,
+    ) -> StorageWriteResult:
+        try:
+            self._upsert_rows(
+                table_name="runs",
+                rows=[record.to_row()],
+                on_conflict="run_id",
+            )
+        except Exception as exc:
+            return StorageWriteResult(errors=[_error_from_exception(exc)])
+
+        return StorageWriteResult(records_written=1)
+
+    def append_provider_snapshots(
+        self,
+        snapshots: Iterable[ProviderSnapshotRecord | dict[str, object]],
+    ) -> StorageWriteResult:
+        records = [_provider_snapshot_record(snapshot) for snapshot in snapshots]
+        rows = [record.to_row() for record in records]
+        if not rows:
+            return StorageWriteResult(records_written=0)
+
+        try:
+            self._upsert_rows(
+                table_name="provider_snapshots",
+                rows=rows,
+                on_conflict="provider_snapshot_id",
+            )
+        except Exception as exc:
+            return StorageWriteResult(errors=[_error_from_exception(exc)])
+
+        return StorageWriteResult(records_written=len(rows))
+
+    def append_provider_errors(
+        self,
+        errors: Iterable[ProviderErrorRecord | dict[str, object]],
+    ) -> StorageWriteResult:
+        records = [_provider_error_record(error) for error in errors]
+        rows = [record.to_row() for record in records]
+        if not rows:
+            return StorageWriteResult(records_written=0)
+
+        try:
+            self._upsert_rows(
+                table_name="provider_errors",
+                rows=rows,
+                on_conflict="provider_error_id",
+            )
+        except Exception as exc:
+            return StorageWriteResult(errors=[_error_from_exception(exc)])
+
+        return StorageWriteResult(records_written=len(rows))
+
     def upsert_watchlist_seed_rows(
         self,
         *,
@@ -199,6 +257,46 @@ class SupabaseStorageAdapter:
             return StorageWriteResult(errors=[_error_from_exception(exc)])
 
         return StorageWriteResult(records_written=len(report_rows))
+
+    def read_provider_snapshot(
+        self,
+        *,
+        provider: str,
+        source_id: str,
+    ) -> ProviderSnapshotRecord | None:
+        try:
+            request = (
+                self._client.schema(self._schema)
+                .table("provider_snapshots")
+                .select("*")
+                .eq("provider", provider.strip().lower())
+                .eq("source_id", source_id)
+            )
+            order = getattr(request, "order", None)
+            if callable(order):
+                request = order("retrieved_at", desc=True)
+            response = request.limit(1).execute()
+        except Exception as exc:
+            raise StorageReadError(_error_from_exception(exc)) from exc
+
+        response_error = getattr(response, "error", None)
+        if response_error is not None:
+            raise StorageReadError(_error_from_exception(response_error))
+
+        rows = getattr(response, "data", None) or []
+        if not rows:
+            return None
+        try:
+            return _provider_snapshot_record(rows[0])
+        except Exception as exc:
+            raise StorageReadError(
+                StorageError(
+                    provider="supabase",
+                    error_type=StorageErrorType.MALFORMED_RESPONSE,
+                    message="Malformed Supabase provider_snapshots response.",
+                    source="supabase",
+                )
+            ) from exc
 
     def _upsert_rows(
         self,
@@ -453,6 +551,26 @@ def _number_or_none(value: object) -> float | None:
     if isinstance(value, (int, float)):
         return float(value)
     return None
+
+
+def _provider_snapshot_record(
+    value: ProviderSnapshotRecord | dict[str, object],
+) -> ProviderSnapshotRecord:
+    if isinstance(value, ProviderSnapshotRecord):
+        return value
+    data = dict(value)
+    data.pop("provider_snapshot_id", None)
+    return ProviderSnapshotRecord.model_validate(data)
+
+
+def _provider_error_record(
+    value: ProviderErrorRecord | dict[str, object],
+) -> ProviderErrorRecord:
+    if isinstance(value, ProviderErrorRecord):
+        return value
+    data = dict(value)
+    data.pop("provider_error_id", None)
+    return ProviderErrorRecord.model_validate(data)
 
 
 def _decision_record_from_row(row: Mapping[str, Any]) -> DecisionJournalRecord:

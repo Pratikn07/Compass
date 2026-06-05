@@ -4,7 +4,12 @@ from collections.abc import Iterable, Sequence
 from typing import Protocol
 
 from prescient.runtime.models import DecisionJournalRecord
-from prescient.storage.models import StorageQuery, StorageWriteResult
+from prescient.storage.models import (
+    ProviderErrorRecord,
+    ProviderSnapshotRecord,
+    StorageQuery,
+    StorageWriteResult,
+)
 
 
 class JournalStorageWriter(Protocol):
@@ -26,8 +31,22 @@ class JournalStorageReader(Protocol):
 class ProviderSnapshotStorage(Protocol):
     def append_provider_snapshots(
         self,
-        snapshots: Iterable[dict[str, object]],
+        snapshots: Iterable[ProviderSnapshotRecord | dict[str, object]],
     ) -> StorageWriteResult:
+        ...
+
+    def append_provider_errors(
+        self,
+        errors: Iterable[ProviderErrorRecord | dict[str, object]],
+    ) -> StorageWriteResult:
+        ...
+
+    def read_provider_snapshot(
+        self,
+        *,
+        provider: str,
+        source_id: str,
+    ) -> ProviderSnapshotRecord | None:
         ...
 
 

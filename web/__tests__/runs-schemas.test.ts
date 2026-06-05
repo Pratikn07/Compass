@@ -7,6 +7,7 @@ import {
   dailyHaltFromRiskRecords,
   providerErrorRowSchema,
   runRowSchema,
+  systemHealthRowSchema,
 } from "@/lib/runs/schemas";
 
 describe("operator schemas", () => {
@@ -76,6 +77,37 @@ describe("runs schemas", () => {
 
     expect(parsed.provider).toBe("finnhub");
     expect(parsed.errorType).toBe("rate_limited");
+  });
+
+  it("parses provider-health system rows with payload details", () => {
+    const parsed = systemHealthRowSchema.parse({
+      system_health_id: "scheduled:2026-06-04:provider_health",
+      component: "provider_health",
+      status: "degraded",
+      detail: "1 provider issue recorded.",
+      latency_seconds: null,
+      run_id: "scheduled:2026-06-04",
+      payload: {
+        providers: {
+          finnhub: {
+            requests: 1,
+            cache_hits: 2,
+            cache_misses: 1,
+            retries: 1,
+            errors: 0,
+            budget_used: 3,
+            budget_limit: 50,
+            last_success_at: "2026-06-04T12:00:00Z",
+            warnings: [],
+          },
+        },
+      },
+      schema_version: 1,
+      created_at: "2026-06-04T12:00:00Z",
+    });
+
+    expect(parsed.component).toBe("provider_health");
+    expect(parsed.payload.providers.finnhub.cache_hits).toBe(2);
   });
 
   it("infers daily halt from risk-decision audit payloads", () => {

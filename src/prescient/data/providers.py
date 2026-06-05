@@ -14,7 +14,7 @@ import httpx
 from prescient.data.alpha_vantage import AlphaVantageNewsSentimentAdapter
 from prescient.data.config import ProviderConfig
 from prescient.data.finnhub import FinnhubEarningsAdapter
-from prescient.data.fmp import FmpStockPeersAdapter
+from prescient.data.fmp import FmpMarketDataAdapter, FmpStockPeersAdapter
 from prescient.data.sec_edgar import SecEdgarFundamentalsAdapter
 
 
@@ -54,6 +54,18 @@ def build_fmp_adapter(
     if not config.has("fmp"):
         return None
     return FmpStockPeersAdapter(
+        api_key=config.fmp_api_key,
+        http_client=http_client,
+    )
+
+
+def build_fmp_market_data_adapter(
+    config: ProviderConfig,
+    http_client: Any | None = None,
+) -> FmpMarketDataAdapter | None:
+    if not config.has("fmp"):
+        return None
+    return FmpMarketDataAdapter(
         api_key=config.fmp_api_key,
         http_client=http_client,
     )

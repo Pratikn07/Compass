@@ -103,8 +103,159 @@ class DecisionAttentionStatus(StrEnum):
     NEEDS_ATTENTION = "needs_attention"
 
 
+class RunStatusRecord(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    run_id: str
+    trigger_type: str | None = None
+    scheduled_date: date | None = None
+    current_date: date | None = None
+    window_start: date | None = None
+    window_end: date | None = None
+    status: str
+    payload: dict[str, Any] = Field(default_factory=dict)
+    created_at: datetime
+    schema_version: int = DEFAULT_STORAGE_SCHEMA_VERSION
+
+    @field_validator("run_id", "status")
+    @classmethod
+    def require_text(cls, value: str) -> str:
+        cleaned = value.strip()
+        if not cleaned:
+            raise ValueError("Run status text fields must not be empty.")
+        return cleaned
+
+    def to_row(self) -> dict[str, Any]:
+        return {
+            "run_id": self.run_id,
+            "trigger_type": self.trigger_type,
+            "scheduled_date": _format_date(self.scheduled_date),
+            "current_date": _format_date(self.current_date),
+            "window_start": _format_date(self.window_start),
+            "window_end": _format_date(self.window_end),
+            "status": self.status,
+            "payload": self.payload,
+            "schema_version": self.schema_version,
+            "created_at": _format_datetime(self.created_at),
+        }
+
+
+class ProviderSnapshotRecord(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    provider: str
+    target: str | None = None
+    theme: str | None = None
+    source_endpoint: str | None = None
+    source_url: str | None = None
+    source_id: str | None = None
+    as_of: date | None = None
+    retrieved_at: datetime | None = None
+    payload: dict[str, Any] = Field(default_factory=dict)
+    created_at: datetime | None = None
+    schema_version: int = DEFAULT_STORAGE_SCHEMA_VERSION
+
+    @field_validator("provider", "source_endpoint")
+    @classmethod
+    def normalize_optional_lowercase(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        normalized = value.strip().lower()
+        return normalized or None
+
+    @field_validator("target", "theme")
+    @classmethod
+    def normalize_optional_uppercase(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        normalized = value.strip().upper()
+        return normalized or None
+
+    @property
+    def provider_snapshot_id(self) -> str:
+        endpoint = self.source_endpoint or "unknown"
+        source = self.source_id or self.target or "global"
+        return f"{self.provider}:{endpoint}:{source}"
+
+    def to_row(self) -> dict[str, Any]:
+        created_at = self.created_at or self.retrieved_at or datetime.now(timezone.utc)
+        return {
+            "provider_snapshot_id": self.provider_snapshot_id,
+            "provider": self.provider,
+            "target": self.target,
+            "theme": self.theme,
+            "source_endpoint": self.source_endpoint,
+            "source_url": self.source_url,
+            "source_id": self.source_id,
+            "as_of": _format_date(self.as_of),
+            "retrieved_at": _format_datetime(self.retrieved_at)
+            if self.retrieved_at is not None
+            else None,
+            "payload": self.payload,
+            "schema_version": self.schema_version,
+            "created_at": _format_datetime(created_at),
+        }
+
+
+class ProviderErrorRecord(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    provider: str
+    error_type: str
+    run_id: str | None = None
+    target: str | None = None
+    source: str | None = None
+    message: str
+    payload: dict[str, Any] = Field(default_factory=dict)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    schema_version: int = DEFAULT_STORAGE_SCHEMA_VERSION
+
+    @field_validator("provider", "error_type", "source")
+    @classmethod
+    def normalize_optional_slug(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        normalized = value.strip().lower()
+        return _safe_error_text(normalized) or None
+
+    @field_validator("target")
+    @classmethod
+    def normalize_optional_target(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        normalized = value.strip().upper()
+        return normalized or None
+
+    @field_validator("message")
+    @classmethod
+    def redact_message(cls, value: str) -> str:
+        return _safe_error_text(value.strip())
+
+    @property
+    def provider_error_id(self) -> str:
+        run = self.run_id or "global"
+        source = self.source or "unknown"
+        target = self.target or "global"
+        return f"{run}:{self.provider}:{source}:{target}"
+
+    def to_row(self) -> dict[str, Any]:
+        return {
+            "provider_error_id": self.provider_error_id,
+            "provider": self.provider,
+            "error_type": self.error_type,
+            "run_id": self.run_id,
+            "target": self.target,
+            "source": self.source,
+            "message": self.message,
+            "payload": self.payload,
+            "schema_version": self.schema_version,
+            "created_at": _format_datetime(self.created_at),
+        }
+
+
 class SystemHealthComponent(StrEnum):
     MARKET_DATA = "market_data"
+    PROVIDER_HEALTH = "provider_health"
     PRICING_ENGINE = "pricing_engine"
     RISK_ENGINE = "risk_engine"
 
@@ -124,6 +275,7 @@ class SystemHealthRecord(BaseModel):
     detail: str | None = None
     latency_seconds: float | None = None
     run_id: str | None = None
+    payload: dict[str, Any] = Field(default_factory=dict)
     created_at: datetime
     schema_version: int = DEFAULT_STORAGE_SCHEMA_VERSION
 
@@ -140,6 +292,7 @@ class SystemHealthRecord(BaseModel):
             "detail": self.detail,
             "latency_seconds": self.latency_seconds,
             "run_id": self.run_id,
+            "payload": self.payload,
             "schema_version": self.schema_version,
             "created_at": _format_datetime(self.created_at),
         }
@@ -297,6 +450,10 @@ def _format_datetime(value: datetime) -> str:
     if value.tzinfo is None:
         value = value.replace(tzinfo=timezone.utc)
     return value.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
+
+
+def _format_date(value: date | None) -> str | None:
+    return value.isoformat() if value is not None else None
 
 
 def _run_trigger_type(run_id: str) -> str | None:

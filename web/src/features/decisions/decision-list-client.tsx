@@ -367,7 +367,7 @@ function DecisionSidebar({
   watchlistsPending: boolean;
 }) {
   return (
-    <aside className="space-y-0 overflow-hidden rounded-card border border-border bg-card">
+    <aside className="overflow-hidden rounded-card border border-border bg-card shadow-sm shadow-primary/[0.03] lg:sticky lg:top-20">
       <SidebarSection title="Quick Filters">
         <SidebarButtonGroup
           items={view.sidebar.quickFilters}
@@ -399,7 +399,9 @@ function DecisionSidebar({
                 className={sidebarButtonClassName(watchlist.active)}
               >
                 <span className="truncate">{watchlist.name}</span>
-                <span className="font-mono text-xs">{watchlist.count}</span>
+                <span className={sidebarCountClassName(watchlist.active)}>
+                  {watchlist.count}
+                </span>
               </button>
             ))}
           </div>
@@ -431,7 +433,9 @@ function DecisionSidebar({
                     {formatRunMeta(run)}
                   </span>
                 </span>
-                <span className="font-mono text-xs">{runDecisionCount(run)}</span>
+                <span className={sidebarCountClassName(active)}>
+                  {runDecisionCount(run)}
+                </span>
               </button>
             );
           })}
@@ -457,8 +461,8 @@ function SidebarSection({
   title: string;
 }) {
   return (
-    <section className="border-b border-border p-3 last:border-b-0">
-      <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+    <section className="border-b border-border px-3 py-3.5 last:border-b-0">
+      <h2 className="mb-2 px-1 text-[0.6875rem] font-semibold uppercase tracking-wider text-muted-foreground/80">
         {title}
       </h2>
       {children}
@@ -485,7 +489,7 @@ function SidebarButtonGroup<T extends string>({
           className={sidebarButtonClassName(item.active)}
         >
           <span>{item.label}</span>
-          <span className="font-mono text-xs">{item.count}</span>
+          <span className={sidebarCountClassName(item.active)}>{item.count}</span>
         </button>
       ))}
     </div>
@@ -514,7 +518,10 @@ function SystemHealthList({
         const row = rows.find((item) => item.component === component.key);
         const status = row?.status ?? "unknown";
         return (
-          <div key={component.key} className="grid gap-1">
+          <div
+            key={component.key}
+            className="grid gap-1 rounded-md border border-border bg-background px-2.5 py-2"
+          >
             <div className="flex items-center justify-between gap-2">
               <span className="text-sm font-medium">{component.label}</span>
               <Badge dot variant={badgeVariantForHealth(status)}>
@@ -735,10 +742,20 @@ function activeRunDate(
 
 function sidebarButtonClassName(active: boolean): string {
   return cn(
-    "flex min-h-9 w-full items-center justify-between gap-2 rounded-md px-2.5 py-1.5 text-left text-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+    "group/sidebar-btn relative flex min-h-9 w-full items-center justify-between gap-2 rounded-md py-1.5 pl-3 pr-2 text-left text-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+    "before:absolute before:left-0 before:top-1/2 before:h-4 before:w-0.5 before:-translate-y-1/2 before:rounded-full before:transition-colors",
     active
-      ? "bg-accent text-accent-foreground"
-      : "text-muted-foreground hover:bg-muted hover:text-foreground",
+      ? "bg-accent/10 font-medium text-foreground before:bg-accent"
+      : "text-muted-foreground before:bg-transparent hover:bg-muted hover:text-foreground",
+  );
+}
+
+function sidebarCountClassName(active: boolean): string {
+  return cn(
+    "inline-flex min-w-5 items-center justify-center rounded-full px-1.5 py-0.5 text-center font-mono text-[0.6875rem] tabular-nums transition-colors",
+    active
+      ? "bg-accent/15 text-accent"
+      : "bg-muted text-muted-foreground group-hover/sidebar-btn:bg-background",
   );
 }
 

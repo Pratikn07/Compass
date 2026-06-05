@@ -8,7 +8,11 @@ from typing import Any, Generic, TypeVar
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from prescient.data.models import DataProviderError, DataProviderErrorType
+from prescient.data.models import (
+    DataProvider,
+    DataProviderError,
+    DataProviderErrorType,
+)
 from prescient.storage import (
     ProviderErrorRecord,
     ProviderSnapshotRecord,
@@ -218,7 +222,7 @@ class ProviderRuntime:
             run_limit=run_limit,
         ):
             error = DataProviderError(
-                provider=provider_key,
+                provider=_provider_enum(provider_key),
                 error_type=DataProviderErrorType.RATE_LIMITED,
                 message="Provider budget exhausted.",
                 retry_after_seconds=None,
@@ -422,6 +426,23 @@ def _provider_key(provider: str) -> str:
     return normalized
 
 
+def _provider_enum(provider_key: str) -> DataProvider:
+    """Map a runtime budget key (e.g. 'fmp_market_data') to a DataProvider enum.
+
+    DataProviderError.provider is a strict enum, but budget keys distinguish
+    sub-adapters (fmp vs fmp_market_data). Collapse to the underlying provider.
+    """
+    key = provider_key.strip().lower()
+    if key.startswith("fmp"):
+        return DataProvider.FMP
+    if key in {"alphavantage", "alpha-vantage", "alpha_vantage"}:
+        return DataProvider.ALPHA_VANTAGE
+    try:
+        return DataProvider(key)
+    except ValueError:
+        return DataProvider.FINNHUB
+
+
 def _budget_count(values: dict[str, int], provider: str) -> int:
     key = _provider_key(provider)
     aliases = {key}
@@ -474,7 +495,7 @@ def _error_from_exception(provider: str, exc: Exception) -> DataProviderError:
         else DataProviderErrorType.PROVIDER_UNAVAILABLE
     )
     return DataProviderError(
-        provider=provider,
+        provider=_provider_enum(provider),
         error_type=error_type,
         message=str(exc) or type(exc).__name__,
     )

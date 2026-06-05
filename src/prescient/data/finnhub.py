@@ -72,11 +72,15 @@ class FinnhubEarningsAdapter:
         base_url: str = "https://finnhub.io/api/v1",
         timeout_seconds: float = 10.0,
         http_client: SyncHttpClient | None = None,
+        prefer_broad_calendar: bool = False,
     ) -> None:
         self.token = token.strip() if token is not None else ""
         self.base_url = base_url.rstrip("/")
         self.timeout_seconds = timeout_seconds
         self.http_client = http_client or _DefaultHttpClient()
+        # Finnhub's free tier returns empty for per-symbol calendar queries; broad
+        # mode fetches the whole calendar once and filters to requested tickers.
+        self.prefer_broad_calendar = prefer_broad_calendar
 
     def get_earnings_calendar(
         self,
@@ -111,6 +115,24 @@ class FinnhubEarningsAdapter:
                 requested_symbol=None,
                 fetched_at=fetched_at,
             )
+
+        if self.prefer_broad_calendar:
+            # Free-tier-safe: one broad call, filter to requested tickers locally.
+            response = self._get(
+                _EARNINGS_CALENDAR_ENDPOINT,
+                params={**base_params, "token": self.token},
+                symbol=None,
+            )
+            if isinstance(response, DataProviderError):
+                return EarningsCalendarResult(errors=[response])
+            result = _parse_calendar_response(
+                response,
+                requested_symbol=None,
+                fetched_at=fetched_at,
+            )
+            wanted = set(symbols)
+            filtered = [s for s in result.snapshots if s.ticker in wanted]
+            return EarningsCalendarResult(snapshots=filtered, errors=result.errors)
 
         snapshots: list[EarningsCalendarSnapshot] = []
         errors: list[DataProviderError] = []

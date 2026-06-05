@@ -41,12 +41,15 @@ class _SecHttpClient:
 def build_finnhub_adapter(
     config: ProviderConfig,
     http_client: Any | None = None,
+    *,
+    prefer_broad_calendar: bool = False,
 ) -> FinnhubEarningsAdapter | None:
     if not config.has("finnhub"):
         return None
     return FinnhubEarningsAdapter(
         token=config.finnhub_api_key,
         http_client=http_client,
+        prefer_broad_calendar=prefer_broad_calendar,
     )
 
 

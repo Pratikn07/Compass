@@ -149,6 +149,40 @@ def test_calendar_lookup_deduplicates_tickers_and_preserves_request_order() -> N
     assert [call["params"]["symbol"] for call in client.calls] == ["AAPL", "MSFT"]
 
 
+def test_prefer_broad_calendar_fetches_once_and_filters_client_side() -> None:
+    # Finnhub's free tier returns empty for per-symbol calendar queries. In broad
+    # mode the adapter fetches the whole calendar once (no symbol param) and filters
+    # to the requested tickers locally.
+    from prescient.data import FinnhubEarningsAdapter
+
+    client = FakeHttpClient(
+        FakeHttpResponse(
+            payload={
+                "earningsCalendar": [
+                    {"symbol": "AAPL", "date": "2026-06-02"},
+                    {"symbol": "TSLA", "date": "2026-06-02"},  # not requested
+                    {"symbol": "MSFT", "date": "2026-06-03"},
+                ]
+            }
+        )
+    )
+    adapter = FinnhubEarningsAdapter(
+        token="secret-token", http_client=client, prefer_broad_calendar=True
+    )
+
+    result = adapter.get_earnings_calendar(
+        date_from=date(2026, 6, 1),
+        date_to=date(2026, 6, 3),
+        tickers=["aapl", "MSFT"],
+    )
+
+    # exactly ONE broad call, no symbol param
+    assert len(client.calls) == 1
+    assert "symbol" not in client.calls[0]["params"]
+    # filtered to requested tickers, TSLA excluded
+    assert sorted(s.ticker for s in result.snapshots) == ["AAPL", "MSFT"]
+
+
 def test_calendar_snapshots_convert_to_upcoming_events_when_actuals_are_missing() -> None:
     from prescient.data import FinnhubEarningsAdapter, to_upcoming_calendar_events
 

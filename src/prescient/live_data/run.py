@@ -220,7 +220,7 @@ def _require_provider_config(
 
 def _build_provider_adapters(config: ProviderConfig) -> dict[str, object | None]:
     return {
-        "finnhub": build_finnhub_adapter(config),
+        "finnhub": build_finnhub_adapter(config, prefer_broad_calendar=True),
         "fmp": build_fmp_adapter(config),
         "fmp_market_data": build_fmp_market_data_adapter(config),
         "alphavantage": build_alpha_vantage_adapter(config),

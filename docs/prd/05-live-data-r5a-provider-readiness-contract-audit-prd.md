@@ -1,5 +1,13 @@
 # PRD: R5A Provider Readiness & Contract Audit
 
+> **Build status (2026-06-04):** R5A.1 (ProviderConfig), R5A.2 (build_*_adapter
+> helpers), and R5A.3 (`scripts/verify_providers.py`) are **built and tested** —
+> 11 new unit tests, full suite green (691 passed), ruff clean. The verify script
+> runs with no keys (all providers SKIPPED, exit 0, no secret leakage).
+> **R5A.4 (contract audit doc) is DEFERRED** until real provider keys are supplied
+> — it requires live calls. Run `verify_providers.py` with keys, then write the
+> audit from its output.
+
 ## Ownership
 
 - **Layer:** `prescient.data` (read-only provider adapters) + a new provider-config seam.

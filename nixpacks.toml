@@ -2,11 +2,10 @@
 # The repo is a uv-managed Python project; install with uv, run uvicorn.
 
 [phases.setup]
-nixPkgs = ["python311", "gcc"]
+nixPkgs = ["python311", "uv", "gcc"]
 
 [phases.install]
 cmds = [
-  "pip install uv",
   "uv sync --frozen --no-dev",
 ]
 

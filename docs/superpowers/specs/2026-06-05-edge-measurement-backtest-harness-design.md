@@ -190,3 +190,132 @@ tests include:
 - The lookahead-bug catcher and skip-not-guess tests pass.
 - Whatever the verdict (survived or dead), it is delivered with an honest
   sample-size label — the owner can act on evidence, not feeling.
+
+---
+
+## Appendix A — Worked example (how prediction + scoring actually work)
+
+This appendix documents the prediction and scoring logic concretely so the
+implementation has an unambiguous reference. Numbers are illustrative.
+
+### Core reframe
+
+We do NOT predict "will earnings be good." We predict **how the stock will move
+relative to what the option price already implies.** Direction-correct is a trap; the
+edge is in beating the *implied move* after IV crush and costs.
+
+### A prediction is always three values
+
+```
+prediction = {
+   direction:          UP | DOWN | NONE
+   predicted_move_pct: signed magnitude, e.g. +9%
+   confidence:         0.0 – 1.0
+}
+```
+
+Every strategy (owner thesis, coin-flip, always-up) emits this same shape, which is
+what makes them comparable.
+
+### The owner thesis as a precise rule (reaction-aware peer read-through)
+
+Standing the day before a target (e.g. MU) reports, look at peers that already
+reported in the trailing ~21 days and compute two scores:
+
+1. **Peer beat score** — average EPS surprise of peers vs. analyst estimates.
+   - e.g. NVDA +10%, AMD +3%, AVGO +2% → `peer_beat_score = +5%`
+2. **Peer reaction score** — average *stock* reaction on each peer's report day.
+   - e.g. NVDA +6%, AMD +1%, AVGO −3% → `peer_reaction_score = +1.3%`
+
+A weak reaction score (peers beat but stocks barely moved) means the good news is
+getting priced in, so the rule outputs a *modest, low-confidence* bullish prediction
+rather than a euphoric one:
+
+```
+direction = UP, predicted_move_pct = +4%, confidence = 0.55
+```
+
+The reaction-awareness is what caps confidence — a naive "4 peers beat → 0.80
+confident" rule walks into the priced-in trap; this one does not.
+
+### Scoring one event (MU, a report that already happened)
+
+Freeze the day before:
+
+```
+MU price (day before):     $100
+MU ATM straddle price:     $8     (call+put at $100 strike)
+  → IMPLIED MOVE = 8/100 = ±8%    (what the options market expects)
+```
+
+Strategy said: `UP, +4%, conf 0.55`. **Flag:** predicted +4% is *inside* the implied
+±8% → the option is priced for a bigger move than we believe → arguably NONE (no
+edge). Recorded as a low/negative edge signal even when direction is bullish.
+
+What actually happened (looked up from history):
+
+```
+MU price day after:  $106  →  REALIZED MOVE = +6%
+```
+
+Score three axes:
+
+- **Axis 1 — Direction:** said UP, went UP → ✅ hit.
+- **Axis 2 — Beat implied?** realized +6% < implied 8% → magnitude came in under what
+  was priced in → ❌ for an option buyer.
+- **Axis 3 — Option P&L after IV crush + costs:** the decisive reality check. Example
+  of the trap — if MU had risen only to $103 (+3%):
+  ```
+  bought $100 call @ $4.00; after report intrinsic = $3, IV premium gone
+  call ≈ $3.05  →  -24% LOSS, despite the stock going UP (direction right!)
+  ```
+  In the actual +6% case: call $4.00 → ~$6.10, minus ~$0.20 cost/spread → +47% win.
+
+**Lesson encoded by the harness:** you can be right on direction and still lose,
+because the option was priced for a larger move. The IV-crush + cost model exists to
+make the backtest incapable of hiding this.
+
+### Aggregating hundreds of events into the verdict
+
+Repeat for every name × every past quarter we have data for, then compare:
+
+```
+                          THESIS    COIN-FLIP   ALWAYS-UP
+Events scored:              287        287         287
+Directional hit-rate:       58%        50%         61%   ← bull-market drift
+Beat-implied-move rate:     47%        50%         44%
+Hypothetical option P&L:    +3%        -8%         -2%
+Calibration (conf>0.7):     55% right
+Sample-size verdict:   "287 events — moderate, treat as suggestive"
+```
+
+**Verdict logic:** thesis beats coin-flip on direction (58% vs 50%) — but always-up
+hits 61%, so the "edge" is likely just market drift. The decisive metric,
+**beat-implied-move**, is 47% — *worse* than the 50% coin-flip. Conclusion: **no real
+edge; does not get traded with real money** under the governing deal. Learned in
+minutes, for free, instead of over months of real losses.
+
+### The whole loop, compressed
+
+```
+FOR each past earnings report in the universe:
+    freeze the day before              (no peeking — enforced)
+    read implied move from options      (what market expects, ±X%)
+    ask strategy → {direction, predicted_move, confidence}
+    look up what ACTUALLY happened       (realized move from history)
+    score: direction? beat-implied? option P&L after IV crush + costs
+AGGREGATE across hundreds of events:
+    compare thesis vs coin-flip vs always-up
+    survive only if it clearly beats BOTH (especially beat-implied)
+    stamp a loud sample-size trust label
+```
+
+### Note on testing speed (why no waiting)
+
+Backtesting replays earnings that **already happened** — hundreds of events available
+now, no waiting for any future report. The owner's "test in the next 2–3 weeks"
+instinct maps to *forward paper-trading*, which is a LATER step (only if the backtest
+survives), not this sub-project. The real constraint here is the historical depth of
+**free options data** (needed for implied move + IV crush), which may be shallow; the
+plan must probe this early, and a one-time paid historical-options dataset is the
+canonical case of "paid spend that earns its place."

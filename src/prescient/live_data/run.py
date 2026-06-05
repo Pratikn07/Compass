@@ -127,7 +127,7 @@ def run_live_data_pipeline(
         telemetry=telemetry,
         run_id=run_id,
     )
-    assemble = assembler if assembler is not None else _missing_assembler
+    assemble = assembler if assembler is not None else default_live_assembler
 
     assembled = assemble(
         run_id=run_id,
@@ -276,6 +276,64 @@ def _wrap_provider_adapters(
 def _missing_assembler(**_: Any) -> AssembledLivePipelineInputs:
     raise LiveDataConfigurationError(
         "Phase B/C assemble_pipeline_inputs contract is not configured."
+    )
+
+
+def default_live_assembler(
+    *,
+    run_id: str,
+    universe: StrategyUniverse,
+    current_date: date,
+    provider_config: ProviderConfig,
+    provider_adapters: Mapping[str, object | None],
+    provider_runtime: object | None = None,
+    settings: StrategySettings = _DEFAULT_SETTINGS,
+) -> AssembledLivePipelineInputs:
+    """Production assembler: bundle live adapters -> Phase B assembly -> live inputs.
+
+    Bridges the wrapped provider adapters into Phase B's PipelineInputProviders,
+    runs the deterministic assembly (which fills options via the Alpaca provider),
+    and maps the result onto the AssembledLivePipelineInputs contract that the
+    orchestration consumes. Requires earnings + market-data providers; others are
+    optional and degrade gracefully.
+    """
+    from prescient.data.assembly import (
+        PipelineInputProviders,
+        assemble_pipeline_inputs,
+    )
+
+    earnings = provider_adapters.get("finnhub")
+    market_data = provider_adapters.get("fmp_market_data")
+    if earnings is None or market_data is None:
+        raise LiveDataConfigurationError(
+            "Live assembly requires finnhub (earnings) and fmp (market data) providers."
+        )
+
+    providers = PipelineInputProviders(
+        earnings=earnings,
+        market_data=market_data,
+        peers=provider_adapters.get("fmp"),
+        news=provider_adapters.get("alphavantage"),
+        options=provider_adapters.get("alpaca"),
+    )
+
+    result = assemble_pipeline_inputs(
+        universe=universe,
+        current_date=current_date,
+        providers=providers,
+        strategy_settings=settings,
+    )
+
+    return AssembledLivePipelineInputs(
+        universe=result.universe,
+        upcoming_events=result.upcoming_events,
+        peer_results=result.peer_results,
+        target_market_data=dict(result.target_market_data),
+        options_chains=dict(result.options_chains),
+        indicator_snapshots=dict(result.indicator_snapshots),
+        provider_snapshots=list(result.provider_snapshots),
+        provider_errors=list(result.provider_errors),
+        skipped_targets=list(result.skipped_targets),
     )
 
 

@@ -238,3 +238,73 @@ def _row(value: Any) -> dict[str, Any]:
     if callable(to_row):
         return to_row()
     return dict(value)
+
+
+def test_default_live_assembler_bridges_adapters_to_live_inputs() -> None:
+    from datetime import date
+
+    from prescient.live_data.run import default_live_assembler
+    from prescient.signal.models import (
+        OptionContractSnapshot,
+        StrategySettings,
+        StrategyUniverse,
+        ThemeConfig,
+    )
+    from prescient.data.config import ProviderConfig
+
+    # Minimal fake adapters matching Phase B provider protocols.
+    class FakeEarnings:
+        def get_earnings_calendar(self, date_from, date_to, tickers=None, fetched_at=None):
+            from prescient.data.models import (
+                EarningsCalendarResult,
+                EarningsCalendarSnapshot,
+            )
+            return EarningsCalendarResult(
+                snapshots=[
+                    EarningsCalendarSnapshot(
+                        ticker="NVDA",
+                        earnings_date=date(2026, 6, 12),
+                        report_time="AMC",
+                        provider="finnhub",
+                        source_endpoint="earnings_calendar",
+                    )
+                ],
+                errors=[],
+            )
+
+    class FakeMarket:
+        def get_historical_prices(self, ticker, date_from, date_to, fetched_at=None):
+            from prescient.data.models import HistoricalPriceResult
+            return HistoricalPriceResult(candles=[], errors=[])
+
+    class FakeOptions:
+        def get_option_chain_snapshots(self, *, underlying_symbol, earnings_date,
+                                       max_expiration_date, feed="indicative", fetched_at=None):
+            return [
+                OptionContractSnapshot(
+                    ticker=underlying_symbol, option_type="CALL",
+                    expiration_date=date(2026, 6, 12), bid=5.0, ask=5.2,
+                    open_interest=100,
+                )
+            ]
+
+    universe = StrategyUniverse(
+        themes=[ThemeConfig(name="AI", tickers=["NVDA", "AMD"], drivers=["AI demand"])]
+    )
+    out = default_live_assembler(
+        run_id="scheduled:2026-06-01",
+        universe=universe,
+        current_date=date(2026, 6, 1),
+        provider_config=ProviderConfig(),
+        provider_adapters={
+            "finnhub": FakeEarnings(),
+            "fmp_market_data": FakeMarket(),
+            "fmp": None,
+            "alphavantage": None,
+            "alpaca": FakeOptions(),
+        },
+        settings=StrategySettings(earnings_window_days=14, peer_result_window_days=21),
+    )
+
+    assert [e.ticker for e in out.upcoming_events] == ["NVDA"]
+    assert out.options_chains["NVDA"][0].bid == 5.0

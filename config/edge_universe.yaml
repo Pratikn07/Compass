@@ -1,0 +1,36 @@
+# Rule-based liquid-optionable US equity universe for the edge backtest.
+# The rule below was applied offline; the resulting list is committed verbatim
+# for reproducibility. Do NOT hand-edit tickers to taste - re-apply the rule.
+rule:
+  min_market_cap_usd: 10000000000      # >= $10B (large-cap, real option markets)
+  min_option_open_interest: 1000       # liquid listed options
+  min_years_history: 2                 # >= 2 years clean daily + earnings history
+  description: >
+    Large-cap US equities with liquid listed options and at least two years of
+    clean daily and earnings history. Selected offline and committed.
+tickers:
+  - NVDA
+  - AMD
+  - AVGO
+  - MRVL
+  - MU
+  - NTAP
+  - PSTG
+  - WDC
+  - STX
+  - INTC
+  - QCOM
+  - TXN
+  - AAPL
+  - MSFT
+  - GOOGL
+  - AMZN
+  - META
+  - TSLA
+  - NFLX
+  - CRM
+  - ORCL
+  - ADBE
+  - AMAT
+  - LRCX
+  - DELL

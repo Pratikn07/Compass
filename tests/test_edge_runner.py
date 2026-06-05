@@ -108,3 +108,34 @@ def test_runner_marks_survived_when_beats_both_baselines_with_enough_events() ->
     card = result.scorecards["reaction_aware_peer"]
     assert card.beat_implied_rate == 100.0
     assert card.survived is True
+
+
+def test_runner_rejects_duplicate_strategy_sources() -> None:
+    import pytest
+
+    from prescient.edge.models import Prediction, PredictionDirection
+    from prescient.edge.runner import run_edge_backtest
+
+    class DupA:
+        source = "reaction_aware_peer"
+        def predict(self, context):
+            return Prediction(
+                ticker=context.ticker, as_of_date=context.as_of_date,
+                direction=PredictionDirection.UP, predicted_move_pct=1.0,
+                confidence=0.5, source=self.source,
+            )
+
+    class DupB:
+        source = "reaction_aware_peer"  # same source -> must be rejected
+        def predict(self, context):
+            return Prediction(
+                ticker=context.ticker, as_of_date=context.as_of_date,
+                direction=PredictionDirection.DOWN, predicted_move_pct=1.0,
+                confidence=0.5, source=self.source,
+            )
+
+    with pytest.raises(ValueError, match="Duplicate strategy source"):
+        run_edge_backtest(
+            contexts=[_ctx("MU", 6.0, date(2024, 6, 25))],
+            strategies=[DupA(), DupB()],
+        )

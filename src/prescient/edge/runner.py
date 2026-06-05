@@ -34,6 +34,8 @@ def run_edge_backtest(
             for context in contexts
         ]
         source = getattr(strategy, "source", strategy.__class__.__name__)
+        if source in raw:
+            raise ValueError(f"Duplicate strategy source: {source!r}")
         raw[source] = build_scorecard(source=source, scores=scores)
 
     best_baseline_rate = max(

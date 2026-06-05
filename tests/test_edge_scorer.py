@@ -81,3 +81,36 @@ def test_score_none_prediction_has_no_option_pnl() -> None:
     score = score_event(prediction=_pred(PredictionDirection.NONE), context=_ctx(6.0))
     assert score.evaluable is True
     assert score.option_pnl is None
+
+
+def test_score_wrong_direction_is_not_correct_and_does_not_beat_implied() -> None:
+    from prescient.edge.scorer import score_event
+
+    # Predict UP but stock fell -12%: direction wrong, and beat_implied must be False
+    # (a wrong-direction move never "beats" the implied move on the predicted side).
+    score = score_event(prediction=_pred(PredictionDirection.UP), context=_ctx(-12.0))
+    assert score.evaluable is True
+    assert score.direction_correct is False
+    assert score.beat_implied is False
+
+
+def test_score_directional_prediction_without_atm_call_has_no_option_pnl() -> None:
+    from datetime import date
+
+    from prescient.edge.scorer import score_event
+
+    # atm_put present, atm_call missing -> implied move cannot be computed (needs both),
+    # so the event is not evaluable rather than silently scored. Documents skip-not-guess.
+    ctx = EventContext(
+        ticker="MU", earnings_date=date(2024, 6, 26), as_of_date=date(2024, 6, 25),
+        underlying_price=100.0, atm_call=None, atm_put=_quote("PUT"),
+        realized_move=RealizedMove(
+            ticker="MU", pre_report_close=100.0, post_report_close=106.0,
+            realized_move_pct=6.0,
+        ),
+    )
+    score = score_event(prediction=_pred(PredictionDirection.UP), context=ctx)
+    # implied move needs BOTH call and put; missing call -> not evaluable
+    assert score.evaluable is False
+    assert score.not_evaluable_reason == "missing_implied_move"
+    assert score.option_pnl is None

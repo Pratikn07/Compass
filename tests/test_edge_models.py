@@ -53,3 +53,17 @@ def test_option_quote_is_frozen_and_keeps_strike() -> None:
     assert quote.mid == pytest.approx(4.0)
     with pytest.raises(ValidationError):
         quote.bid = 5.0  # type: ignore[misc]
+
+
+def test_realized_and_event_score_normalize_ticker() -> None:
+    from prescient.edge.models import EventScore, RealizedMove
+
+    rm = RealizedMove(
+        ticker="mu", pre_report_close=100.0, post_report_close=106.0,
+        realized_move_pct=6.0,
+    )
+    assert rm.ticker == "MU"
+    es = EventScore(
+        ticker="nvda", as_of_date=date(2024, 6, 25), source="x", evaluable=False,
+    )
+    assert es.ticker == "NVDA"

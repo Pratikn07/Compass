@@ -57,6 +57,7 @@ class OptionQuote(BaseModel):
 
     @property
     def mid(self) -> float | None:
+        """Mid price, or None when bid or ask is unavailable."""
         if self.bid is None or self.ask is None:
             return None
         return (self.bid + self.ask) / 2.0
@@ -84,6 +85,11 @@ class RealizedMove(BaseModel):
     pre_report_close: float
     post_report_close: float
     realized_move_pct: float  # signed
+
+    @field_validator("ticker")
+    @classmethod
+    def normalize_ticker(cls, value: str) -> str:
+        return _norm_ticker(value)
 
 
 class OptionPnl(BaseModel):
@@ -133,6 +139,11 @@ class EventScore(BaseModel):
     realized_move_pct: float | None = None
     option_pnl: OptionPnl | None = None
     confidence: float | None = None
+
+    @field_validator("ticker")
+    @classmethod
+    def normalize_ticker(cls, value: str) -> str:
+        return _norm_ticker(value)
 
 
 class SampleSizeVerdict(StrEnum):

@@ -225,8 +225,29 @@ def _build_provider_adapters(config: ProviderConfig) -> dict[str, object | None]
         "fmp_market_data": build_fmp_market_data_adapter(config),
         "alphavantage": build_alpha_vantage_adapter(config),
         "sec_edgar": build_sec_edgar_adapter(config),
-        "alpaca": build_alpaca_market_data_adapter(config),
+        "alpaca": _build_alpaca_adapter(config),
     }
+
+
+def _build_alpaca_adapter(config: ProviderConfig) -> object | None:
+    """Build the Alpaca adapter with live SDK readers when creds are present.
+
+    SDK readers are constructed here (orchestration layer), not in the data
+    package, to keep prescient.data free of the Alpaca SDK import.
+    """
+    if not config.has("alpaca"):
+        return None
+    from prescient.live_data.alpaca_readers import build_alpaca_sdk_readers
+
+    option_chain_reader, daily_bars_reader = build_alpaca_sdk_readers(
+        api_key_id=config.alpaca_api_key_id or "",
+        api_secret_key=config.alpaca_api_secret_key or "",
+    )
+    return build_alpaca_market_data_adapter(
+        config,
+        option_chain_reader=option_chain_reader,
+        daily_bars_reader=daily_bars_reader,
+    )
 
 
 def _wrap_provider_adapters(

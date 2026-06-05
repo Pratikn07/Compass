@@ -82,13 +82,15 @@ def build_alpaca_market_data_adapter(
 ) -> "AlpacaMarketDataAdapter | None":
     """Build the read-only Alpaca market-data adapter when both creds are present.
 
-    Readers can be injected for tests; in production a later wiring step builds
-    real Alpaca SDK reader callables from the configured key id + secret.
+    Readers are injected (tests, or the live_data layer's SDK readers). The data
+    package never imports the Alpaca SDK itself — SDK-bound readers are built in
+    prescient.live_data.alpaca_readers and passed in.
     """
     from prescient.data.alpaca_market import AlpacaMarketDataAdapter
 
     if not config.has("alpaca"):
         return None
+
     return AlpacaMarketDataAdapter(
         option_chain_reader=option_chain_reader,
         daily_bars_reader=daily_bars_reader,

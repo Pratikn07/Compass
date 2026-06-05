@@ -37,8 +37,16 @@ class PointInTimeDataset:
 
 
 def _latest_close(bars: list[DailyBarSnapshot], as_of_date: date) -> float | None:
+    """Most recent close on or before as_of_date.
+
+    `bars` are assumed already filtered to as-of (trading_date <= as_of_date) and
+    sorted ascending by the caller. Walking from the end yields the latest visible
+    close, which correctly handles an as_of_date that is itself a non-trading day
+    (holiday/weekend) without ever looking ahead. Returns None when no usable
+    close exists.
+    """
     for bar in reversed(bars):
-        if bar.trading_date == as_of_date and bar.close is not None:
+        if bar.trading_date <= as_of_date and bar.close is not None:
             return bar.close
     return None
 
@@ -46,6 +54,11 @@ def _latest_close(bars: list[DailyBarSnapshot], as_of_date: date) -> float | Non
 def _atm_quote(
     quotes: list[OptionQuote], option_type: str, underlying_price: float
 ) -> OptionQuote | None:
+    """ATM quote: the contract whose strike is closest to underlying_price.
+
+    Ties (equidistant strikes) resolve to the first in list order. Returns None
+    when no quote of the requested option_type exists.
+    """
     candidates = [q for q in quotes if q.option_type == option_type]
     if not candidates:
         return None

@@ -83,3 +83,47 @@ def test_build_event_context_none_when_no_asof_price() -> None:
         as_of_date=date(2024, 6, 25), horizon_days=2,
     )
     assert ctx is None
+
+
+def test_latest_close_uses_prior_trading_day_when_as_of_is_holiday() -> None:
+    from prescient.edge.loader import PointInTimeDataset, build_event_context
+
+    # as_of_date 2024-06-29 is a Saturday (no bar). Most recent prior close (06-28)
+    # must be used as the underlying price - no event should be silently dropped,
+    # and no future bar may be used.
+    ds = PointInTimeDataset(
+        bars={
+            "MU": [
+                _bar(date(2024, 6, 28), 100.0),   # Friday close (latest <= as_of)
+                _bar(date(2024, 7, 1), 105.0),     # Monday (after as_of - must NOT leak)
+                _bar(date(2024, 7, 2), 108.0),
+                _bar(date(2024, 7, 3), 110.0),
+            ]
+        },
+        option_quotes={
+            "MU": [
+                _quote("CALL", date(2024, 6, 28)),
+                _quote("PUT", date(2024, 6, 28)),
+            ]
+        },
+    )
+    ctx = build_event_context(
+        dataset=ds, ticker="MU", earnings_date=date(2024, 7, 1),
+        as_of_date=date(2024, 6, 29), horizon_days=2,
+    )
+    assert ctx is not None
+    assert ctx.underlying_price == 100.0  # Friday close, not the Monday +future bar
+
+
+def test_latest_close_none_when_only_future_bars() -> None:
+    from prescient.edge.loader import PointInTimeDataset, build_event_context
+
+    ds = PointInTimeDataset(
+        bars={"MU": [_bar(date(2024, 7, 1), 105.0)]},  # only AFTER as_of
+        option_quotes={"MU": []},
+    )
+    ctx = build_event_context(
+        dataset=ds, ticker="MU", earnings_date=date(2024, 7, 2),
+        as_of_date=date(2024, 6, 29), horizon_days=2,
+    )
+    assert ctx is None

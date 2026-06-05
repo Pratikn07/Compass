@@ -15,8 +15,10 @@ from prescient.edge.models import (
     SampleSizeVerdict,
     StrategyScorecard,
 )
+from prescient.edge.runner import EdgeBacktestResult, run_edge_backtest
 
 __all__ = [
+    "EdgeBacktestResult",
     "EventContext",
     "EventScore",
     "ImpliedMove",
@@ -27,4 +29,5 @@ __all__ = [
     "RealizedMove",
     "SampleSizeVerdict",
     "StrategyScorecard",
+    "run_edge_backtest",
 ]

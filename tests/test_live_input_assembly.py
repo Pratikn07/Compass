@@ -330,6 +330,50 @@ def test_assemble_pipeline_inputs_builds_runtime_ready_inputs_without_expanding_
     assert peers.calls == ["NTNX"]
 
 
+def test_assemble_pipeline_inputs_populates_options_chains_when_provider_present() -> None:
+    from prescient.signal.models import OptionContractSnapshot
+
+    class FakeOptionsProvider:
+        def __init__(self) -> None:
+            self.calls: list[str] = []
+
+        def get_option_chain_snapshots(
+            self, *, underlying_symbol, earnings_date, max_expiration_date,
+            feed="indicative", fetched_at=None,
+        ):
+            self.calls.append(underlying_symbol)
+            return [
+                OptionContractSnapshot(
+                    ticker=underlying_symbol,
+                    option_type="CALL",
+                    expiration_date=date(2026, 6, 12),
+                    bid=5.0,
+                    ask=5.2,
+                    open_interest=100,
+                )
+            ]
+
+    options = FakeOptionsProvider()
+    result = assemble_pipeline_inputs(
+        universe=_universe(),
+        current_date=date(2026, 6, 1),
+        providers=PipelineInputProviders(
+            earnings=FakeEarningsProvider(),
+            market_data=FakeMarketProvider(),
+            peers=FakePeerProvider(),
+            news=FakeNewsProvider(),
+            options=options,
+        ),
+        strategy_settings=StrategySettings(earnings_window_days=1, peer_result_window_days=21),
+        assembly_settings=PipelineInputAssemblySettings(runup_trading_days=21),
+        fetched_at=datetime(2026, 6, 1, 13, 0, tzinfo=timezone.utc),
+    )
+
+    assert options.calls == ["NTNX"]
+    assert len(result.options_chains["NTNX"]) == 1
+    assert result.options_chains["NTNX"][0].bid == 5.0
+
+
 def test_assemble_pipeline_inputs_collects_provider_errors_without_crashing() -> None:
     result = assemble_pipeline_inputs(
         universe=_universe(),

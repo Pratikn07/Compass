@@ -81,12 +81,26 @@ class NewsProvider(Protocol):
         ...
 
 
+class OptionsChainProvider(Protocol):
+    def get_option_chain_snapshots(
+        self,
+        *,
+        underlying_symbol: str,
+        earnings_date: date,
+        max_expiration_date: date,
+        feed: str = "indicative",
+        fetched_at: datetime | None = None,
+    ) -> list[OptionContractSnapshot]:
+        ...
+
+
 @dataclass(frozen=True)
 class PipelineInputProviders:
     earnings: EarningsCalendarProvider
     market_data: HistoricalMarketDataProvider
     peers: StockPeersProvider | None = None
     news: NewsProvider | None = None
+    options: OptionsChainProvider | None = None
 
 
 class PipelineInputAssemblySettings(BaseModel):
@@ -233,13 +247,22 @@ def assemble_pipeline_inputs(
             )
         )
 
+    options_chains = _assemble_options_chains(
+        upcoming_events=upcoming_events,
+        provider=providers.options,
+        current_date=current_date,
+        strategy_settings=strategy_settings,
+        provider_errors=provider_errors,
+        fetched_at=fetched_at,
+    )
+
     return PipelineInputAssemblyResult(
         universe=universe,
         current_date=current_date,
         upcoming_events=upcoming_events,
         peer_results=peer_results,
         target_market_data=target_market_data,
-        options_chains={event.ticker: [] for event in upcoming_events},
+        options_chains=options_chains,
         indicator_snapshots=indicator_snapshots,
         provider_errors=_dedupe_provider_errors(provider_errors),
         skipped_targets=sorted(skipped_targets),
@@ -272,6 +295,43 @@ def derive_target_market_data(
             settings=settings,
         ),
     )
+
+
+def _assemble_options_chains(
+    *,
+    upcoming_events: Sequence[EarningsCalendarEvent],
+    provider: OptionsChainProvider | None,
+    current_date: date,
+    strategy_settings: StrategySettings,
+    provider_errors: list[DataProviderError],
+    fetched_at: datetime | None,
+) -> dict[str, list[OptionContractSnapshot]]:
+    """Fill options chains per upcoming target via the options provider.
+
+    Returns empty lists when no provider is configured (Phase B / no-Alpaca mode),
+    so the deterministic engine deterministically rejects illiquid setups rather
+    than the run crashing. A provider failure for one target degrades that target
+    to an empty chain; the engine handles the rest.
+    """
+    chains: dict[str, list[OptionContractSnapshot]] = {}
+    max_expiration = current_date + timedelta(
+        days=strategy_settings.earnings_window_days + 30
+    )
+    for event in upcoming_events:
+        if provider is None:
+            chains[event.ticker] = []
+            continue
+        try:
+            snapshots = provider.get_option_chain_snapshots(
+                underlying_symbol=event.ticker,
+                earnings_date=event.earnings_date,
+                max_expiration_date=max_expiration,
+                fetched_at=fetched_at,
+            )
+        except Exception:
+            snapshots = []
+        chains[event.ticker] = list(snapshots)
+    return chains
 
 
 def derive_price_reaction_pct(

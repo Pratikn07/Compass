@@ -7,9 +7,12 @@ unchanged — these only wire config -> constructor.
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import httpx
+
+if TYPE_CHECKING:
+    from prescient.data.alpaca_market import AlpacaMarketDataAdapter
 
 from prescient.data.alpha_vantage import AlphaVantageNewsSentimentAdapter
 from prescient.data.config import ProviderConfig
@@ -68,6 +71,27 @@ def build_fmp_market_data_adapter(
     return FmpMarketDataAdapter(
         api_key=config.fmp_api_key,
         http_client=http_client,
+    )
+
+
+def build_alpaca_market_data_adapter(
+    config: ProviderConfig,
+    *,
+    option_chain_reader: Any | None = None,
+    daily_bars_reader: Any | None = None,
+) -> "AlpacaMarketDataAdapter | None":
+    """Build the read-only Alpaca market-data adapter when both creds are present.
+
+    Readers can be injected for tests; in production a later wiring step builds
+    real Alpaca SDK reader callables from the configured key id + secret.
+    """
+    from prescient.data.alpaca_market import AlpacaMarketDataAdapter
+
+    if not config.has("alpaca"):
+        return None
+    return AlpacaMarketDataAdapter(
+        option_chain_reader=option_chain_reader,
+        daily_bars_reader=daily_bars_reader,
     )
 
 

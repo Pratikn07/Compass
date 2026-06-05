@@ -15,6 +15,7 @@ class DataProvider(StrEnum):
     SEC_EDGAR = "sec_edgar"
     FINANCIAL_DATASETS = "financial_datasets"
     DALOOPA = "daloopa"
+    ALPACA = "alpaca"
 
 
 class DataProviderErrorType(StrEnum):
@@ -115,6 +116,28 @@ class HistoricalPriceResult(BaseModel):
 
     candles: list[HistoricalPriceCandle] = Field(default_factory=list)
     errors: list[DataProviderError] = Field(default_factory=list)
+
+
+class DailyBarSnapshot(BaseModel):
+    """One daily OHLCV bar from the Alpaca stock market-data feed (R5C.2)."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    ticker: str
+    trading_date: date
+    open: float | None = None
+    high: float | None = None
+    low: float | None = None
+    close: float | None = None
+    volume: int | None = None
+    vwap: float | None = None
+    provider: DataProvider = DataProvider.ALPACA
+    source_citations: list[SourceCitation] = Field(default_factory=list)
+
+    @field_validator("ticker")
+    @classmethod
+    def normalize_ticker(cls, value: str) -> str:
+        return value.strip().upper()
 
 
 class EarningsCalendarSnapshot(BaseModel):

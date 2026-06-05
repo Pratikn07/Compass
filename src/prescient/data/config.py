@@ -21,6 +21,9 @@ _PROVIDER_FIELDS: dict[str, str] = {
     "sec_edgar": "sec_edgar_user_agent",
 }
 
+# Providers needing more than one credential get a custom availability rule below.
+_MULTI_CREDENTIAL_PROVIDERS = ("alpaca",)
+
 
 def _clean(value: str | None) -> str | None:
     if value is None:
@@ -36,6 +39,8 @@ class ProviderConfig(BaseModel):
     fmp_api_key: str | None = None
     alphavantage_api_key: str | None = None
     sec_edgar_user_agent: str | None = None
+    alpaca_api_key_id: str | None = None
+    alpaca_api_secret_key: str | None = None
 
     @classmethod
     def from_env(cls, env: Mapping[str, str]) -> "ProviderConfig":
@@ -44,10 +49,17 @@ class ProviderConfig(BaseModel):
             fmp_api_key=_clean(env.get("FMP_API_KEY")),
             alphavantage_api_key=_clean(env.get("ALPHAVANTAGE_API_KEY")),
             sec_edgar_user_agent=_clean(env.get("SEC_EDGAR_USER_AGENT")),
+            alpaca_api_key_id=_clean(env.get("ALPACA_API_KEY_ID")),
+            alpaca_api_secret_key=_clean(env.get("ALPACA_API_SECRET_KEY")),
         )
 
     def has(self, provider: str) -> bool:
-        """True when the named provider has a non-empty credential."""
+        """True when the named provider has all required credentials."""
+        if provider == "alpaca":
+            return (
+                self.alpaca_api_key_id is not None
+                and self.alpaca_api_secret_key is not None
+            )
         field = self._field_for(provider)
         return getattr(self, field) is not None
 
@@ -60,14 +72,15 @@ class ProviderConfig(BaseModel):
         try:
             return _PROVIDER_FIELDS[provider]
         except KeyError:
+            known = sorted([*_PROVIDER_FIELDS, *_MULTI_CREDENTIAL_PROVIDERS])
             raise ValueError(
-                f"Unknown provider {provider!r}; "
-                f"known: {sorted(_PROVIDER_FIELDS)}"
+                f"Unknown provider {provider!r}; known: {known}"
             ) from None
 
     def __repr__(self) -> str:
         # Never leak secret values; report only which providers are configured.
-        configured = [p for p in _PROVIDER_FIELDS if self.has(p)]
+        all_providers = [*_PROVIDER_FIELDS, *_MULTI_CREDENTIAL_PROVIDERS]
+        configured = [p for p in all_providers if self.has(p)]
         return f"ProviderConfig(configured={configured})"
 
     __str__ = __repr__

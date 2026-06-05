@@ -54,3 +54,27 @@ def test_repr_does_not_leak_secrets() -> None:
         {"FINNHUB_API_KEY": "super-secret-key"}
     )
     assert "super-secret-key" not in repr(config)
+
+
+def test_alpaca_requires_both_key_and_secret() -> None:
+    # Alpaca is available only when BOTH the key id and secret are present.
+    both = ProviderConfig.from_env(
+        {"ALPACA_API_KEY_ID": "kid", "ALPACA_API_SECRET_KEY": "secret"}
+    )
+    assert both.has("alpaca") is True
+    assert both.alpaca_api_key_id == "kid"
+    assert both.alpaca_api_secret_key == "secret"
+
+    only_key = ProviderConfig.from_env({"ALPACA_API_KEY_ID": "kid"})
+    assert only_key.has("alpaca") is False
+
+    only_secret = ProviderConfig.from_env({"ALPACA_API_SECRET_KEY": "secret"})
+    assert only_secret.has("alpaca") is False
+
+
+def test_alpaca_secret_not_leaked_in_repr() -> None:
+    config = ProviderConfig.from_env(
+        {"ALPACA_API_KEY_ID": "kid", "ALPACA_API_SECRET_KEY": "top-secret-alpaca"}
+    )
+    assert "top-secret-alpaca" not in repr(config)
+    assert "kid" not in repr(config)

@@ -30,6 +30,7 @@ from prescient.data.models import (
     RevenueEstimateResult,
 )
 from prescient.data.providers import (
+    build_alpaca_market_data_adapter,
     build_alpha_vantage_adapter,
     build_finnhub_adapter,
     build_fmp_adapter,
@@ -224,6 +225,7 @@ def _build_provider_adapters(config: ProviderConfig) -> dict[str, object | None]
         "fmp_market_data": build_fmp_market_data_adapter(config),
         "alphavantage": build_alpha_vantage_adapter(config),
         "sec_edgar": build_sec_edgar_adapter(config),
+        "alpaca": build_alpaca_market_data_adapter(config),
     }
 
 

@@ -9,7 +9,7 @@ broker execution adapter is constructed.
 from __future__ import annotations
 
 from collections.abc import Sequence
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from typing import Any
 
 from prescient.data.alpaca_market import (
@@ -113,8 +113,6 @@ def build_historical_option_reader(
     Lists EXPIRED contracts (both CALL and PUT) in the expiration window, then batch
     fetches daily option bars and takes the bar on/just-before as_of_date for each
     contract, returning normalized HistoricalOptionRow rows (close from the bar)."""
-    from datetime import datetime, timedelta
-
     from alpaca.data.historical.option import OptionHistoricalDataClient
     from alpaca.data.requests import OptionBarsRequest
     from alpaca.data.timeframe import TimeFrame
@@ -125,7 +123,11 @@ def build_historical_option_reader(
     trading = TradingClient(api_key_id, api_secret_key, paper=True)
 
     def historical_option_reader(
-        *, underlying_symbol, as_of_date, earnings_date, max_expiration_date
+        *,
+        underlying_symbol: str,
+        as_of_date: date,
+        earnings_date: date,
+        max_expiration_date: date,
     ) -> list[HistoricalOptionRow]:
         contracts: list[Any] = []
         for opt_type in ("call", "put"):

@@ -227,6 +227,9 @@ class AlpacaMarketDataAdapter:
         if not calls or not puts:
             return []
 
+        # ATM strike chosen from CALL strikes, then the same-strike PUT is paired below.
+        # Calls/puts share strikes at standard listings, so this is well-defined; the
+        # asymmetry (selecting off calls) is intentional and harmless. Ties -> lower strike.
         atm_strike = min(
             (r.strike for r in calls),
             key=lambda s: (abs(s - underlying_price), s),

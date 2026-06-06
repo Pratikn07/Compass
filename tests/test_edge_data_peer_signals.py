@@ -85,3 +85,28 @@ def test_peer_omitted_when_reaction_bars_missing() -> None:
     )
     assert surprises["NVDA"] == 8.0
     assert "NVDA" not in reactions
+
+
+def test_peer_with_multiple_quarters_uses_most_recent_qualifying() -> None:
+    from prescient.edge.data.peer_signals import build_peer_signals
+
+    # Two NVDA announcements both inside the window; the most RECENT (6/18) must win,
+    # regardless of input order.
+    anns = [
+        EarningsAnnouncement(ticker="NVDA", report_date=date(2024, 6, 18),
+                             surprise_pct=9.0),
+        EarningsAnnouncement(ticker="NVDA", report_date=date(2024, 6, 10),
+                             surprise_pct=2.0),
+    ]
+    surprises, _ = build_peer_signals(
+        target="MU", target_as_of_date=date(2024, 6, 25), announcements=anns,
+        bars={}, peer_window_days=21,
+    )
+    assert surprises["NVDA"] == 9.0  # most recent quarter, not the 2.0 one
+
+    # reversed input order -> same deterministic result
+    surprises2, _ = build_peer_signals(
+        target="MU", target_as_of_date=date(2024, 6, 25),
+        announcements=list(reversed(anns)), bars={}, peer_window_days=21,
+    )
+    assert surprises2["NVDA"] == 9.0

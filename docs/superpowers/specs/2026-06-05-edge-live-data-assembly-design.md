@@ -231,7 +231,22 @@ The frozen scoring modules (`scorer`, `runner`, `scorecard`, `strategy`, `loader
 - The first real survived/dead verdict for the thesis vs baselines is produced, with an
   honest sample-size label — evidence, not assumption.
 
+## Known limitation found in implementation (blocks live option metrics)
+
+The existing live Alpaca option reader (`prescient.live_data.alpaca_readers`) fetches
+only the CURRENT, CALL-only active chain. The implied move requires an as-of-date ATM
+CALL+PUT straddle, so with this reader every event scores `not_evaluable /
+missing_implied_move` and the option scorecard is empty. The stock-side spine (earnings
+dates, bars, peer signals) and the assembly pipeline are real and tested; only the
+option-quote source is insufficient for a meaningful first run. Resolving it needs a
+**historical-options reader** (Alpaca `get_option_bars` per expired contract, both
+CALL and PUT, stamped with the true historical quote date) — the Alpaca probe on
+2026-06-05 confirmed that data exists on the free tier. This is the next sub-project.
+
 ## Explicitly deferred (later sub-projects)
+
+- Historical-options reader (CALL+PUT, true as-of quote dates) — required before the
+  option/implied-move metrics are meaningful (see Known limitation above).
 
 - News / sentiment / analyst-revision collectors.
 - The blending prediction engine and selectivity gate.

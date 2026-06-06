@@ -8,6 +8,16 @@ Usage:
 
 Caches earnings history on disk (fetch-once) under .cache/edge/.
 Propose-only research tooling: it never places, sizes, or suggests a trade.
+
+KNOWN LIMITATION (blocks meaningful option metrics until resolved):
+The live Alpaca option reader (prescient.live_data.alpaca_readers) fetches only
+the CURRENT, CALL-only active chain. The implied move needs an as-of-date ATM
+CALL+PUT straddle, so with this reader every event scores `not_evaluable /
+missing_implied_move` and the scorecards show 0 evaluable option events. A real
+run therefore measures NOTHING on the option axis yet. Resolving this needs a
+historical-options reader (Alpaca get_option_bars per expired contract, both
+CALL and PUT, stamped with the true historical quote date) -- scoped as the next
+sub-project. Stock-side coverage (earnings spine, bars, peer signals) is real now.
 """
 
 from __future__ import annotations

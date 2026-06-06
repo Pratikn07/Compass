@@ -143,15 +143,26 @@ def build_historical_option_reader(
         if not contracts:
             return []
 
-        symbol_meta = {
-            c.symbol: (
+        symbol_meta: dict[str, tuple[float, Any, str, int | None]] = {}
+        for c in contracts:
+            type_text = str(c.type).lower()
+            if "call" in type_text:
+                opt_type = "CALL"
+            elif "put" in type_text:
+                opt_type = "PUT"
+            else:
+                # Fail loud: a silent misclassification would make every straddle
+                # fail to pair. Surfacing the unexpected SDK value is the honest
+                # move.
+                raise ValueError(
+                    f"Unrecognized option type from Alpaca: {c.type!r}"
+                )
+            symbol_meta[c.symbol] = (
                 float(c.strike_price),
                 c.expiration_date,
-                "CALL" if str(c.type).lower().endswith("call") else "PUT",
+                opt_type,
                 int(c.open_interest) if c.open_interest is not None else None,
             )
-            for c in contracts
-        }
 
         start = (
             datetime(as_of_date.year, as_of_date.month, as_of_date.day)
@@ -172,8 +183,19 @@ def build_historical_option_reader(
         bars_by_symbol = getattr(bars_resp, "data", {}) or {}
 
         rows: list[HistoricalOptionRow] = []
-        for symbol, (strike, expiration, opt_type, open_interest) in symbol_meta.items():
-            bars = bars_by_symbol.get(symbol, [])
+        for symbol, (
+            strike,
+            expiration,
+            opt_type,
+            open_interest,
+        ) in symbol_meta.items():
+            # Sort ascending so the LAST bar with date <= as_of is the
+            # on/just-before bar, even if the SDK ever returns bars out of order
+            # (live data we cannot unit-test; cheap insurance against a
+            # silently-stale close price).
+            bars = sorted(
+                bars_by_symbol.get(symbol, []), key=lambda b: b.timestamp
+            )
             as_of_bar = None
             for bar in bars:
                 if bar.timestamp.date() <= as_of_date:

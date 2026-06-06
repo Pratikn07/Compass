@@ -107,3 +107,19 @@ def test_tie_break_prefers_lower_strike() -> None:
         max_expiration_date=date(2024, 7, 10),
     )
     assert {q.strike for q in quotes} == {140.0}
+
+
+def test_returns_empty_when_put_missing_at_atm_strike() -> None:
+    # Puts exist, but not at the ATM strike the call selects -> no same-strike
+    # straddle -> []. (Distinct from the no-puts-at-all path.)
+    rows = [
+        _row("MU_C_141", 141.0, "CALL", 9.08),
+        _row("MU_P_140", 140.0, "PUT", 8.95),  # different strike
+        _row("MU_P_145", 145.0, "PUT", 7.50),  # different strike
+    ]
+    quotes = _adapter(rows).get_historical_atm_straddle(
+        underlying_symbol="MU", as_of_date=date(2024, 6, 25),
+        underlying_price=141.0, earnings_date=date(2024, 6, 26),
+        max_expiration_date=date(2024, 7, 10),
+    )
+    assert quotes == []

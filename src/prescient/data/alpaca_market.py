@@ -129,7 +129,7 @@ class AlpacaMarketDataAdapter:
         edge OptionQuotes stamped with quote_date. Strike-preserving and both
         types - unlike get_option_chain_snapshots which drops strike and keeps
         CALLs only. The edge import is local to keep prescient.data free of a
-        module-load-time dependency on prescient.edge (one-way layering)."""
+        module-load-time dependency on prescient.edge (one-way layering). Note: this returns ALL strikes in the expiration window (both CALL and PUT); the actual at-the-money selection happens downstream in the edge loader's _atm_quote, so callers receive the full chain to choose from."""
         from prescient.edge.models import OptionQuote
 
         symbol = underlying_symbol.strip().upper()

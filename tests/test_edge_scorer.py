@@ -114,3 +114,83 @@ def test_score_directional_prediction_without_atm_call_has_no_option_pnl() -> No
     assert score.evaluable is False
     assert score.not_evaluable_reason == "missing_implied_move"
     assert score.option_pnl is None
+
+
+def test_sell_vol_small_move_scores_short_pnl_and_stayed_within() -> None:
+    from datetime import date
+    from prescient.edge.models import (
+        EventContext, OptionQuote, Prediction, PredictionDirection, RealizedMove,
+    )
+    from prescient.edge.scorer import score_event
+
+    def q(ot):
+        return OptionQuote(ticker="MU", option_type=ot, strike=100.0,
+                           expiration_date=date(2024, 7, 19),
+                           quote_date=date(2024, 6, 25), bid=3.9, ask=4.1)
+    ctx = EventContext(
+        ticker="MU", earnings_date=date(2024, 6, 26), as_of_date=date(2024, 6, 25),
+        underlying_price=100.0, atm_call=q("CALL"), atm_put=q("PUT"),
+        realized_move=RealizedMove(ticker="MU", pre_report_close=100.0,
+                                   post_report_close=103.0, realized_move_pct=3.0),
+    )
+    pred = Prediction(ticker="MU", as_of_date=date(2024, 6, 25),
+                      direction=PredictionDirection.NONE, predicted_move_pct=0.0,
+                      confidence=0.5, source="short_vol", sell_straddle=True)
+    s = score_event(prediction=pred, context=ctx)
+    assert s.evaluable is True
+    assert s.stayed_within_implied is True       # 3% < 8%
+    assert s.option_pnl is not None
+    assert s.direction_correct is None
+    assert s.beat_implied is None
+
+
+def test_sell_vol_big_move_not_stayed_within_and_capped_loss() -> None:
+    from datetime import date
+    from prescient.edge.models import (
+        EventContext, OptionQuote, Prediction, PredictionDirection, RealizedMove,
+    )
+    from prescient.edge.scorer import score_event
+
+    def q(ot):
+        return OptionQuote(ticker="MU", option_type=ot, strike=100.0,
+                           expiration_date=date(2024, 7, 19),
+                           quote_date=date(2024, 6, 25), bid=3.9, ask=4.1)
+    ctx = EventContext(
+        ticker="MU", earnings_date=date(2024, 6, 26), as_of_date=date(2024, 6, 25),
+        underlying_price=100.0, atm_call=q("CALL"), atm_put=q("PUT"),
+        realized_move=RealizedMove(ticker="MU", pre_report_close=100.0,
+                                   post_report_close=120.0, realized_move_pct=20.0),
+    )
+    pred = Prediction(ticker="MU", as_of_date=date(2024, 6, 25),
+                      direction=PredictionDirection.NONE, predicted_move_pct=0.0,
+                      confidence=0.5, source="short_vol", sell_straddle=True)
+    s = score_event(prediction=pred, context=ctx)
+    assert s.stayed_within_implied is False
+    assert s.option_pnl is not None
+    assert s.option_pnl.net_pnl < 0
+
+
+def test_directional_scoring_unchanged_no_regression() -> None:
+    from datetime import date
+    from prescient.edge.models import (
+        EventContext, OptionQuote, Prediction, PredictionDirection, RealizedMove,
+    )
+    from prescient.edge.scorer import score_event
+
+    def q(ot):
+        return OptionQuote(ticker="MU", option_type=ot, strike=100.0,
+                           expiration_date=date(2024, 7, 19),
+                           quote_date=date(2024, 6, 25), bid=3.9, ask=4.1)
+    ctx = EventContext(
+        ticker="MU", earnings_date=date(2024, 6, 26), as_of_date=date(2024, 6, 25),
+        underlying_price=100.0, atm_call=q("CALL"), atm_put=q("PUT"),
+        realized_move=RealizedMove(ticker="MU", pre_report_close=100.0,
+                                   post_report_close=112.0, realized_move_pct=12.0),
+    )
+    pred = Prediction(ticker="MU", as_of_date=date(2024, 6, 25),
+                      direction=PredictionDirection.UP, predicted_move_pct=4.0,
+                      confidence=0.55, source="reaction_aware_peer")
+    s = score_event(prediction=pred, context=ctx)
+    assert s.direction_correct is True
+    assert s.beat_implied is True
+    assert s.stayed_within_implied is None

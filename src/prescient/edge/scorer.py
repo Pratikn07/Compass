@@ -7,9 +7,13 @@ from prescient.edge.models import (
     Prediction,
     PredictionDirection,
 )
-from prescient.edge.option_pnl import simulate_option_pnl
+from prescient.edge.option_pnl import (
+    simulate_capped_short_straddle_pnl,
+    simulate_option_pnl,
+)
 
 _COST_HAIRCUT_PCT = 0.05
+_DEFAULT_RISK_WIDTH_W = 5.0
 
 
 def score_event(*, prediction: Prediction, context: EventContext) -> EventScore:
@@ -59,9 +63,23 @@ def score_event(*, prediction: Prediction, context: EventContext) -> EventScore:
             abs(realized_pct) >= implied.implied_move_pct
         )
 
+    stayed_within_implied: bool | None = None
     option_pnl = None
-    if prediction.direction in (PredictionDirection.UP, PredictionDirection.DOWN):
-        strike = context.atm_call.strike if context.atm_call is not None else None
+    strike = context.atm_call.strike if context.atm_call is not None else None
+
+    if prediction.sell_straddle:
+        # Non-directional defined-risk short straddle.
+        stayed_within_implied = abs(realized_pct) < implied.implied_move_pct
+        if strike is not None:
+            option_pnl = simulate_capped_short_straddle_pnl(
+                straddle_price=implied.straddle_price,
+                strike=strike,
+                underlying_price=context.underlying_price,
+                post_report_close=realized.post_report_close,
+                risk_width=_DEFAULT_RISK_WIDTH_W,
+                cost_haircut_pct=_COST_HAIRCUT_PCT,
+            )
+    elif prediction.direction in (PredictionDirection.UP, PredictionDirection.DOWN):
         if strike is not None:
             option_pnl = simulate_option_pnl(
                 direction=prediction.direction.name,  # "UP"/"DOWN"
@@ -82,4 +100,5 @@ def score_event(*, prediction: Prediction, context: EventContext) -> EventScore:
         realized_move_pct=realized_pct,
         option_pnl=option_pnl,
         confidence=prediction.confidence,
+        stayed_within_implied=stayed_within_implied,
     )

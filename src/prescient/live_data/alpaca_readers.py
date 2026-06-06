@@ -14,6 +14,8 @@ from typing import Any
 
 from prescient.data.alpaca_market import (
     DailyBarsReader,
+    HistoricalOptionReader,
+    HistoricalOptionRow,
     OptionChainEntry,
     OptionChainReader,
 )
@@ -101,3 +103,91 @@ def build_alpaca_sdk_readers(
         return out
 
     return option_chain_reader, daily_bars_reader
+
+
+def build_historical_option_reader(
+    *, api_key_id: str, api_secret_key: str
+) -> HistoricalOptionReader:
+    """Build a live reader callable for as-of historical option straddles (read-only).
+
+    Lists EXPIRED contracts (both CALL and PUT) in the expiration window, then batch
+    fetches daily option bars and takes the bar on/just-before as_of_date for each
+    contract, returning normalized HistoricalOptionRow rows (close from the bar)."""
+    from datetime import datetime, timedelta
+
+    from alpaca.data.historical.option import OptionHistoricalDataClient
+    from alpaca.data.requests import OptionBarsRequest
+    from alpaca.data.timeframe import TimeFrame
+    from alpaca.trading.client import TradingClient
+    from alpaca.trading.requests import GetOptionContractsRequest
+
+    option_data = OptionHistoricalDataClient(api_key_id, api_secret_key)
+    trading = TradingClient(api_key_id, api_secret_key, paper=True)
+
+    def historical_option_reader(
+        *, underlying_symbol, as_of_date, earnings_date, max_expiration_date
+    ) -> list[HistoricalOptionRow]:
+        contracts: list[Any] = []
+        for opt_type in ("call", "put"):
+            resp = trading.get_option_contracts(
+                GetOptionContractsRequest(
+                    underlying_symbols=[underlying_symbol],
+                    status="inactive",
+                    type=opt_type,
+                    expiration_date_gte=earnings_date,
+                    expiration_date_lte=max_expiration_date,
+                    limit=1000,
+                )
+            )
+            contracts.extend(getattr(resp, "option_contracts", []) or [])
+        if not contracts:
+            return []
+
+        symbol_meta = {
+            c.symbol: (
+                float(c.strike_price),
+                c.expiration_date,
+                "CALL" if str(c.type).lower().endswith("call") else "PUT",
+                int(c.open_interest) if c.open_interest is not None else None,
+            )
+            for c in contracts
+        }
+
+        start = (
+            datetime(as_of_date.year, as_of_date.month, as_of_date.day)
+            - timedelta(days=4)
+        )
+        end = (
+            datetime(as_of_date.year, as_of_date.month, as_of_date.day)
+            + timedelta(days=1)
+        )
+        bars_resp = option_data.get_option_bars(
+            OptionBarsRequest(
+                symbol_or_symbols=list(symbol_meta.keys()),
+                start=start,
+                end=end,
+                timeframe=TimeFrame.Day,
+            )
+        )
+        bars_by_symbol = getattr(bars_resp, "data", {}) or {}
+
+        rows: list[HistoricalOptionRow] = []
+        for symbol, (strike, expiration, opt_type, open_interest) in symbol_meta.items():
+            bars = bars_by_symbol.get(symbol, [])
+            as_of_bar = None
+            for bar in bars:
+                if bar.timestamp.date() <= as_of_date:
+                    as_of_bar = bar
+            rows.append(
+                HistoricalOptionRow(
+                    contract_symbol=symbol,
+                    strike=strike,
+                    expiration_date=expiration,
+                    option_type=opt_type,
+                    close=getattr(as_of_bar, "close", None),
+                    open_interest=open_interest,
+                )
+            )
+        return rows
+
+    return historical_option_reader

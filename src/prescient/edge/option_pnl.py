@@ -43,3 +43,44 @@ def simulate_option_pnl(
         net_pnl=net_pnl,
         return_pct=(net_pnl / entry_premium) * 100.0,
     )
+
+
+def simulate_capped_short_straddle_pnl(
+    *,
+    straddle_price: float,
+    strike: float,
+    underlying_price: float,
+    post_report_close: float,
+    risk_width: float,
+    cost_haircut_pct: float,
+) -> OptionPnl | None:
+    """Hypothetical DEFINED-RISK short straddle (sell the ATM straddle, cap the loss
+    at `risk_width` W via protective wings whose cost is modeled honestly).
+
+    credit       = straddle_price (premium received for selling)
+    wing_cost    = credit * min(1.0, straddle_price / (2 * W))  -- scales INVERSELY
+                   with W (tighter cap = costlier wings), never exceeds the credit.
+    payout       = |post_report_close - strike|  (what the short straddle owes)
+    net          = credit - wing_cost - payout - bid/ask haircut, FLOORED at -W.
+    return_pct   = net / W * 100  (return on capital-at-risk, not on premium).
+
+    Returns None on invalid inputs (non-positive credit, strike, or W). The bid/ask
+    haircut is applied to the credit (cost of getting in/out). This is the RETAIL,
+    UNHEDGED, sell-and-hold version (no delta-hedging modeled)."""
+    if straddle_price <= 0 or strike <= 0 or risk_width <= 0:
+        return None
+
+    credit = straddle_price
+    wing_cost = credit * min(1.0, straddle_price / (2.0 * risk_width))
+    payout = abs(post_report_close - strike)
+    cost_haircut = credit * cost_haircut_pct
+    net_pnl = credit - wing_cost - payout - cost_haircut
+    if net_pnl < -risk_width:
+        net_pnl = -risk_width
+    return OptionPnl(
+        entry_premium=credit,
+        exit_value=payout,
+        cost_haircut=wing_cost + cost_haircut,
+        net_pnl=net_pnl,
+        return_pct=(net_pnl / risk_width) * 100.0,
+    )

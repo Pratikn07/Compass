@@ -41,7 +41,17 @@ def assemble_edge_dataset(
         if ann.ticker not in targets:
             continue
         total += 1
-        as_of_date = ann.report_date - timedelta(days=1)
+        # Anchor as_of to the last TRADING day on/before report_date - 1 calendar day.
+        # A bare calendar -1 lands on weekends/holidays, where compute_realized_move
+        # (which needs a bar dated exactly on as_of) returns None and silently drops
+        # Monday/post-holiday reporters. Derive the real prior trading day from bars.
+        calendar_prior = ann.report_date - timedelta(days=1)
+        visible = dataset.bars_as_of(ann.ticker, as_of_date=calendar_prior)
+        if not visible:
+            dropped += 1
+            drop_reasons["no_prior_bar"] = drop_reasons.get("no_prior_bar", 0) + 1
+            continue
+        as_of_date = visible[-1].trading_date
         ctx = build_event_context(
             dataset=dataset,
             ticker=ann.ticker,

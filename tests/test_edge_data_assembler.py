@@ -68,7 +68,7 @@ def test_drops_event_without_asof_price() -> None:
     )
     assert result.event_contexts == []
     assert result.events_dropped == 1
-    assert result.drop_reasons.get("no_event_context", 0) == 1
+    assert result.drop_reasons.get("no_prior_bar", 0) == 1
 
 
 def test_non_target_announcements_are_not_counted_or_assembled() -> None:
@@ -97,3 +97,33 @@ def test_non_target_announcements_are_not_counted_or_assembled() -> None:
     # only MU is a target -> events_total counts 1, and the single context is MU
     assert result.events_total == 1
     assert [c.ticker for c in result.event_contexts] == ["MU"]
+
+
+def test_as_of_anchors_to_prior_trading_day_for_monday_report() -> None:
+    from prescient.edge.data.assembler import assemble_edge_dataset
+
+    # MU reports Monday 2024-07-01. report_date-1 = Sunday 2024-06-30 (no bar).
+    # as_of must anchor to Friday 2024-06-28 (last trading day <= 06-30), and the
+    # event must remain evaluable (realized move computed from the as_of trading day).
+    announcements = [
+        EarningsAnnouncement(ticker="MU", report_date=date(2024, 7, 1),
+                             surprise_pct=10.0),
+    ]
+    bars = {
+        "MU": [
+            _bar("MU", date(2024, 6, 27), 98.0),
+            _bar("MU", date(2024, 6, 28), 100.0),   # Friday = real prior trading day
+            _bar("MU", date(2024, 7, 1), 103.0),
+            _bar("MU", date(2024, 7, 2), 106.0),     # horizon 2 -> +6%
+        ],
+    }
+    option_quotes = {"MU": _straddle("MU", date(2024, 6, 28))}
+    result = assemble_edge_dataset(
+        announcements=announcements, bars=bars, option_quotes=option_quotes,
+        target_tickers=["MU"], horizon_days=2, peer_window_days=21,
+    )
+    assert len(result.event_contexts) == 1
+    ctx = result.event_contexts[0]
+    assert ctx.as_of_date == date(2024, 6, 28)   # Friday, not Sunday 06-30
+    assert ctx.underlying_price == 100.0
+    assert ctx.realized_move is not None          # not silently dropped

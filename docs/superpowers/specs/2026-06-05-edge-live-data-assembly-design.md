@@ -27,22 +27,30 @@ This sub-project builds that assembly layer. It does NOT change scoring/survival
 |---|---|---|
 | Stock daily bars (~10yr) | Alpaca | Available (2016 to now) |
 | Historical option straddles | Alpaca | Available (verified MU 2024 ATM straddle) |
-| EPS actual vs estimate | Finnhub | Only last ~4 quarters, keyed by fiscal-period |
+| EPS actual vs estimate (last ~4q) | Finnhub | Only last ~4 quarters, keyed by fiscal-period |
 | Historical earnings DATES | Finnhub | Empty for any past window |
 | Historical earnings calendar (date-bounded) | FMP | 402 Payment Required (paid feature) |
+| **Historical earnings dates + EPS est/actual** | **Alpha Vantage `EARNINGS`** | **FREE, ~30yr depth** |
 
-**Conclusion:** prices + options are free and sufficient; the historical earnings
-**spine** is not available free. Decision (owner): use a **cheap paid earnings-history
-source**, targeting **FMP's paid tier first** (key + adapter + endpoint shape already
-proven), behind a swappable interface.
+**Conclusion:** the historical earnings **spine** IS available free after all — the
+Alpha Vantage `EARNINGS` endpoint returns, in a single per-ticker call, decades of
+`reportedDate` (the announcement date — our anchor), `estimatedEPS`, `reportedEPS`,
+`surprise`, `surprisePercentage`, and `reportTime` (BMO/AMC). Verified live on the
+public `demo` key (IBM: 121 quarters back to 1996). **No paid subscription is needed**
+(FMP-paid was the earlier plan; the Alpha Vantage probe made it unnecessary). Prices +
+options stay free on Alpaca. The whole sub-project is $0.
+
+The only cost is Alpha Vantage's free-tier **rate limit** (historically ~25 req/day),
+which is a non-issue here: one request per ticker returns ALL history, and the
+fetch-once cache means we never re-hit it (25 names = one day's budget, cached forever).
 
 ---
 
 ## Scope
 
-**In scope:** assemble `(list[EventContext], PointInTimeDataset)` from FMP-paid earnings
-history + Alpaca bars/options, compute peer signals, and a single live command that runs
-the existing harness and prints the scorecard.
+**In scope:** assemble `(list[EventContext], PointInTimeDataset)` from Alpha Vantage
+(free) earnings history + Alpaca bars/options, compute peer signals, and a single live
+command that runs the existing harness and prints the scorecard.
 
 **Out of scope:** any change to `prescient.edge` scoring/survival modules (frozen); live
 or paper trading; news/sentiment/revision collectors (later sub-projects); a UI.
@@ -50,8 +58,11 @@ or paper trading; news/sentiment/revision collectors (later sub-projects); a UI.
 ## Governing commitments
 
 1. **Swappable earnings source.** Assembly depends on an `EarningsHistoryProvider`
-   interface, not on FMP. FMP-paid is the first implementation; swapping vendors must
-   not touch assembly. (Direct consequence of today's probe: don't weld to one vendor.)
+   interface, not on any one vendor. **Alpha Vantage `EARNINGS` (free) is the
+   implementation this sub-project ships**; the interface keeps a vendor swap (e.g. to a
+   paid source) a one-file change. (Direct consequence of today's probes: don't weld to
+   one vendor — and verify before paying. The verify step turned a planned paid
+   dependency into a free one.)
 2. **No-lookahead preserved.** Inputs use only data `<= as_of_date`; the realized move is
    the only allowed look-forward (already isolated in `compute_realized_move`). The peer
    filter (below) is the key new guard.
@@ -72,13 +83,21 @@ core).
 
 ### 1. `earnings_history.py`
 - `EarningsAnnouncement` (frozen model): `ticker`, `report_date: date`,
-  `report_time: ReportTime`, `eps_estimate: float | None`, `eps_actual: float | None`.
+  `report_time: ReportTime`, `eps_estimate: float | None`, `eps_actual: float | None`,
+  `surprise_pct: float | None` (Alpha Vantage gives this directly).
 - `EarningsHistoryProvider` (Protocol):
   `get_earnings_history(*, tickers, start, end) -> list[EarningsAnnouncement]`.
-- `FmpEarningsHistoryAdapter` (first impl): calls FMP's date-bounded earnings endpoint
-  (`/stable/earnings-calendar` with `from`/`to` on the paid tier), normalizes the shape
-  observed live (`date`, `epsEstimated`, `epsActual`), filters to requested tickers,
-  returns secret-safe structured errors on failure. Injected HTTP transport.
+- `AlphaVantageEarningsHistoryAdapter` (the impl this ships): one `EARNINGS` call per
+  ticker (`function=EARNINGS&symbol=…&apikey=…`), reads `quarterlyEarnings[]`, maps
+  `reportedDate -> report_date`, `estimatedEPS -> eps_estimate`,
+  `reportedEPS -> eps_actual`, `surprisePercentage -> surprise_pct`,
+  `reportTime -> report_time` (BMO/AMC/UNKNOWN), filters to `[start, end]`, returns
+  secret-safe structured errors (incl. the AV rate-limit "Note"/"Information" message ->
+  a RATE_LIMITED error). Lives alongside the existing `AlphaVantageNewsSentimentAdapter`
+  in `src/prescient/data/alpha_vantage.py` (reuse its `SyncHttpClient` transport +
+  `_get` error pattern) OR in the new `edge/data/earnings_history.py` wrapping that
+  transport — implementation chooses the lower-duplication path. Injected HTTP transport;
+  no live calls in tests.
 
 ### 2. `bars_loader.py`
 - `HistoricalBarsLoader.load(*, tickers, start, end) -> dict[str, list[DailyBarSnapshot]]`
@@ -97,7 +116,8 @@ core).
   - A peer counts ONLY if `peer.report_date < target.as_of_date` AND within the trailing
     `peer_window_days` (default 21) — mirrors the candidate engine's rule. This is the
     central no-lookahead guard of this layer.
-  - `peer_eps_surprises[peer]` = percent EPS surprise =
+  - `peer_eps_surprises[peer]` = percent EPS surprise. Prefer the provider's
+    `surprise_pct` when present (Alpha Vantage supplies it directly); otherwise compute
     `((eps_actual - eps_estimate) / |eps_estimate|) * 100` when both present.
   - `peer_stock_reactions[peer]` = percent move from the close the trading day BEFORE the
     peer's report to the close the trading day AFTER (close-before -> close-after),
@@ -125,10 +145,10 @@ core).
 ## Data flow (one direction)
 
 ```
-EarningsHistoryProvider (FMP-paid)  ─┐
-HistoricalBarsLoader (Alpaca)        ├─> DatasetAssembler ─> (EventContexts, PointInTimeDataset)
-HistoricalOptionLoader (Alpaca)      ┘        │                         │
-PeerSignalBuilder (pure, derived) <──────────┘                         v
+EarningsHistoryProvider (Alpha Vantage, free) ─┐
+HistoricalBarsLoader (Alpaca)                   ├─> DatasetAssembler ─> (EventContexts, PointInTimeDataset)
+HistoricalOptionLoader (Alpaca)                 ┘        │                         │
+PeerSignalBuilder (pure, derived) <─────────────────────┘                         v
                                                           existing run_edge_backtest -> scorecards
 ```
 
@@ -147,7 +167,9 @@ Nothing here reaches into scoring; it only produces inputs.
 
 ## Cost control
 
-- Earnings history: one date-ranged sweep, cached to disk; reused across runs.
+- Earnings history: one Alpha Vantage `EARNINGS` call per ticker (returns ALL history),
+  cached to disk and reused across runs. AV free tier is rate-limited (~25 req/day) —
+  25 names fits one day's budget, and the cache means we fetch each ticker once, ever.
 - Bars: one batched multi-symbol Alpaca call over the full window.
 - Options: one chain pull per event (the expensive call), cached by (ticker, as_of_date).
 - `--limit N` guard for a ~20-event smoke test before the full ~200.
@@ -165,8 +187,11 @@ Nothing here reaches into scoring; it only produces inputs.
 ## Testing
 
 TDD, injected fakes, no live calls in the suite:
-- `FmpEarningsHistoryAdapter`: feed the live JSON shape (`date`/`epsEstimated`/
-  `epsActual`); assert normalized announcements + secret-safe errors on 402/timeout.
+- `AlphaVantageEarningsHistoryAdapter`: feed the live JSON shape (`quarterlyEarnings[]`
+  with `reportedDate`/`estimatedEPS`/`reportedEPS`/`surprisePercentage`/`reportTime`);
+  assert normalized announcements, date-window filtering, BMO/AMC mapping, and
+  secret-safe errors on the AV rate-limit "Note"/"Information" message (-> RATE_LIMITED)
+  and on timeout.
 - `HistoricalBarsLoader` / `HistoricalOptionLoader`: fake readers; assert batching and
   per-ticker accumulation.
 - `PeerSignalBuilder`: the critical test — a peer reporting at/after the target's
@@ -181,7 +206,7 @@ TDD, injected fakes, no live calls in the suite:
 ```
 src/prescient/edge/data/
   __init__.py
-  earnings_history.py
+  earnings_history.py     # EarningsAnnouncement + EarningsHistoryProvider + AlphaVantageEarningsHistoryAdapter
   bars_loader.py
   option_loader.py
   peer_signals.py
@@ -190,6 +215,9 @@ src/prescient/edge/data/
 scripts/run_edge_backtest.py
 tests/test_edge_data_*.py
 ```
+
+Requires a free `ALPHAVANTAGE_API_KEY` in `.env` for the live run only (the public
+`demo` key works for IBM only; tests use fakes and need no key).
 
 The frozen scoring modules (`scorer`, `runner`, `scorecard`, `strategy`, `loader`,
 `option_pnl`, `implied_move`, `realized_move`, `models`) are NOT modified.

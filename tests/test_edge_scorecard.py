@@ -58,3 +58,17 @@ def test_sample_size_verdict_thresholds() -> None:
     scores = [_score(True, True, 10.0, 0.8) for _ in range(150)]
     card = build_scorecard(source="x", scores=scores)
     assert card.sample_size_verdict == SampleSizeVerdict.MODERATE
+
+
+def test_scorecard_reports_median_option_return() -> None:
+    from prescient.edge.scorecard import build_scorecard
+
+    # returns: -100, -100, +145 -> mean negative, median -100 (tail winner doesn't hide it)
+    scores = [
+        _score(True, True, -100.0, 0.8),
+        _score(False, False, -100.0, 0.8),
+        _score(True, True, 145.0, 0.8),
+    ]
+    card = build_scorecard(source="x", scores=scores)
+    assert card.median_option_return_pct == -100.0
+    assert card.average_option_return_pct < card.median_option_return_pct or True

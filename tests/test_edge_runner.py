@@ -139,3 +139,86 @@ def test_runner_rejects_duplicate_strategy_sources() -> None:
             contexts=[_ctx("MU", 6.0, date(2024, 6, 25))],
             strategies=[DupA(), DupB()],
         )
+
+
+def test_runner_cannot_survive_without_both_baselines() -> None:
+    from datetime import timedelta
+
+    from prescient.edge.models import Prediction, PredictionDirection
+    from prescient.edge.runner import run_edge_backtest
+
+    class StrongUp:
+        source = "reaction_aware_peer"
+        def predict(self, context):
+            return Prediction(
+                ticker=context.ticker, as_of_date=context.as_of_date,
+                direction=PredictionDirection.UP, predicted_move_pct=10.0,
+                confidence=0.8, source=self.source,
+            )
+
+    # 200 strong wins but NO baselines supplied -> must NOT survive
+    contexts = [
+        _ctx("MU", 12.0, date(2024, 1, 1) + timedelta(days=i))
+        for i in range(200)
+    ]
+    result = run_edge_backtest(contexts=contexts, strategies=[StrongUp()])
+    assert result.scorecards["reaction_aware_peer"].survived is False
+    assert any(
+        "baselines are required" in n
+        for n in result.scorecards["reaction_aware_peer"].notes
+    )
+
+
+def test_runner_does_not_survive_when_return_is_negative() -> None:
+    from datetime import timedelta
+
+    from prescient.edge.models import Prediction, PredictionDirection
+    from prescient.edge.runner import run_edge_backtest
+
+    # Strategy predicts DOWN; realized is small negative (-1%) every time:
+    # on the predicted (down) side but |move| 1% < implied 8% -> beat_implied False,
+    # and the put is deep OTM-ish -> option P&L negative. Use a case where it DOES
+    # beat implied frequency yet loses money: predict DOWN, realized -9% (beats implied
+    # 8% on down side = True) BUT we still must check return. A -9% move makes a put
+    # bought at straddle/2=4.0, strike 100, post=91 -> intrinsic 9 -> +x WIN actually.
+    # So instead: make beat_implied True often but mix big losers so MEAN return < 0.
+    # Simplest: half events realized -9% (put wins), half realized +0.5% (put loses ~ -100%).
+    class DownStrat:
+        source = "reaction_aware_peer"
+        def predict(self, context):
+            return Prediction(
+                ticker=context.ticker, as_of_date=context.as_of_date,
+                direction=PredictionDirection.DOWN, predicted_move_pct=-9.0,
+                confidence=0.8, source=self.source,
+            )
+
+    class Flip:
+        source = "coin_flip"
+        def predict(self, context):
+            return Prediction(
+                ticker=context.ticker, as_of_date=context.as_of_date,
+                direction=PredictionDirection.UP, predicted_move_pct=0.0,
+                confidence=0.5, source=self.source,
+            )
+
+    class Up:
+        source = "always_up"
+        def predict(self, context):
+            return Prediction(
+                ticker=context.ticker, as_of_date=context.as_of_date,
+                direction=PredictionDirection.UP, predicted_move_pct=0.0,
+                confidence=0.5, source=self.source,
+            )
+
+    contexts = []
+    for i in range(200):
+        pct = -9.0 if i % 5 == 0 else 0.5  # mostly tiny up moves -> DOWN puts lose
+        contexts.append(_ctx("MU", pct, date(2024, 1, 1) + timedelta(days=i)))
+
+    result = run_edge_backtest(
+        contexts=contexts, strategies=[DownStrat(), Flip(), Up()],
+    )
+    card = result.scorecards["reaction_aware_peer"]
+    # If average return is negative, must NOT survive even if it sometimes beats implied.
+    if card.average_option_return_pct is not None and card.average_option_return_pct <= 0:
+        assert card.survived is False

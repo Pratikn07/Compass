@@ -38,6 +38,8 @@ def run_edge_backtest(
             raise ValueError(f"Duplicate strategy source: {source!r}")
         raw[source] = build_scorecard(source=source, scores=scores)
 
+    both_baselines_present = all(name in raw for name in _BASELINE_SOURCES)
+
     best_baseline_rate = max(
         (
             raw[name].beat_implied_rate or 0.0
@@ -53,15 +55,25 @@ def run_edge_backtest(
             finalized[source] = card.model_copy(update={"survived": None})
             continue
         rate = card.beat_implied_rate
+        avg_return = card.average_option_return_pct
         survived = (
-            rate is not None
+            both_baselines_present
+            and rate is not None
             and card.sample_size_verdict != SampleSizeVerdict.TOO_FEW
             and rate >= best_baseline_rate + _SURVIVAL_MARGIN_PCT
+            and avg_return is not None
+            and avg_return > 0.0
         )
         notes = list(card.notes)
-        if not survived:
+        if not both_baselines_present:
             notes.append(
-                "Did not clearly beat baselines on beat-implied - not tradeable."
+                "Cannot determine survival: both coin_flip and always_up "
+                "baselines are required."
+            )
+        elif not survived:
+            notes.append(
+                "Did not clearly beat baselines on beat-implied with positive "
+                "return - not tradeable."
             )
         finalized[source] = card.model_copy(
             update={"survived": survived, "notes": notes}

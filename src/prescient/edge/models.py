@@ -162,6 +162,7 @@ class StrategyScorecard(BaseModel):
     directional_hit_rate: float | None = None
     beat_implied_rate: float | None = None
     average_option_return_pct: float | None = None
+    median_option_return_pct: float | None = None
     high_confidence_hit_rate: float | None = None
     sample_size_verdict: SampleSizeVerdict
     survived: bool | None = None  # set by the runner after baseline comparison

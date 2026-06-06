@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from statistics import median
+
 from prescient.edge.models import EventScore, SampleSizeVerdict, StrategyScorecard
 
 _HIGH_CONFIDENCE = 0.7
@@ -55,6 +57,7 @@ def build_scorecard(*, source: str, scores: list[EventScore]) -> StrategyScoreca
         average_option_return_pct=(
             sum(returns) / len(returns) if returns else None
         ),
+        median_option_return_pct=(median(returns) if returns else None),
         high_confidence_hit_rate=_rate(high_conf),
         sample_size_verdict=verdict,
         survived=None,

@@ -66,7 +66,9 @@ def simulate_capped_short_straddle_pnl(
 
     Returns None on invalid inputs (non-positive credit, strike, or W). The bid/ask
     haircut is applied to the credit (cost of getting in/out). This is the RETAIL,
-    UNHEDGED, sell-and-hold version (no delta-hedging modeled)."""
+    UNHEDGED, sell-and-hold version (no delta-hedging modeled). `underlying_price`
+    is currently unused (reserved for a future strike-aware wing-pricing model); the
+    ATM strike approximates it today."""
     if straddle_price <= 0 or strike <= 0 or risk_width <= 0:
         return None
 

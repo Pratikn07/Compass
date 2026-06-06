@@ -51,16 +51,33 @@ DailyBarsReader = Callable[..., dict[str, list[dict[str, Any]]]]
 ErrorSink = Callable[[DataProviderError], None]
 
 
+@dataclass(frozen=True)
+class HistoricalOptionRow:
+    """A past option contract + its close on a specific as-of date (from option bars)."""
+
+    contract_symbol: str
+    strike: float
+    expiration_date: date
+    option_type: Literal["CALL", "PUT"]
+    close: float | None
+    open_interest: int | None = None
+
+
+HistoricalOptionReader = Callable[..., list["HistoricalOptionRow"]]
+
+
 class AlpacaMarketDataAdapter:
     def __init__(
         self,
         *,
         option_chain_reader: OptionChainReader | None = None,
         daily_bars_reader: DailyBarsReader | None = None,
+        historical_option_reader: "HistoricalOptionReader | None" = None,
         error_sink: ErrorSink | None = None,
     ) -> None:
         self._option_chain_reader = option_chain_reader
         self._daily_bars_reader = daily_bars_reader
+        self._historical_option_reader = historical_option_reader
         self._errors: list[DataProviderError] = []
         self._error_sink = error_sink or self._errors.append
 
@@ -162,6 +179,84 @@ class AlpacaMarketDataAdapter:
             )
             for entry in entries
             if earnings_date <= entry.expiration_date <= max_expiration_date
+        ]
+
+    def get_historical_atm_straddle(
+        self,
+        *,
+        underlying_symbol: str,
+        as_of_date: date,
+        underlying_price: float,
+        earnings_date: date,
+        max_expiration_date: date,
+    ) -> list["OptionQuote"]:
+        """Return the as-of ATM [call, put] straddle for a past earnings event, priced
+        at each leg's bar close (history has no bid/ask; the spread cost is modeled in
+        the P&L haircut, so close avoids double-counting). Returns [] on any missing
+        piece (no contracts, only one leg, missing close) - skip, never guess. Strike
+        is the one nearest underlying_price; ties resolve to the lower strike."""
+        from prescient.edge.models import OptionQuote
+
+        symbol = underlying_symbol.strip().upper()
+        if self._historical_option_reader is None:
+            self._record(
+                DataProviderErrorType.PROVIDER_UNAVAILABLE,
+                "Alpaca historical-option reader is not configured.",
+                symbol=symbol,
+            )
+            return []
+        try:
+            rows = self._historical_option_reader(
+                underlying_symbol=symbol,
+                as_of_date=as_of_date,
+                earnings_date=earnings_date,
+                max_expiration_date=max_expiration_date,
+            )
+        except Exception as exc:
+            self._record(*_classify(exc), symbol=symbol)
+            return []
+
+        in_window = [
+            row
+            for row in rows
+            if earnings_date <= row.expiration_date <= max_expiration_date
+            and row.close is not None
+        ]
+        calls = [r for r in in_window if r.option_type == "CALL"]
+        puts = [r for r in in_window if r.option_type == "PUT"]
+        if not calls or not puts:
+            return []
+
+        atm_strike = min(
+            (r.strike for r in calls),
+            key=lambda s: (abs(s - underlying_price), s),
+        )
+        call = next((r for r in calls if r.strike == atm_strike), None)
+        put = next((r for r in puts if r.strike == atm_strike), None)
+        if call is None or put is None:
+            return []
+
+        return [
+            OptionQuote(
+                ticker=symbol,
+                option_type="CALL",
+                strike=atm_strike,
+                expiration_date=call.expiration_date,
+                quote_date=as_of_date,
+                bid=call.close,
+                ask=call.close,
+                open_interest=call.open_interest,
+            ),
+            OptionQuote(
+                ticker=symbol,
+                option_type="PUT",
+                strike=atm_strike,
+                expiration_date=put.expiration_date,
+                quote_date=as_of_date,
+                bid=put.close,
+                ask=put.close,
+                open_interest=put.open_interest,
+            ),
         ]
 
     def get_daily_bars(

@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import time
 from datetime import date, timedelta
 from pathlib import Path
 
@@ -43,31 +44,43 @@ _PEER_WINDOW_DAYS = 21
 _MAX_EXPIRATION_DAYS = 14
 
 
-def _cached_earnings(cache, adapter, tickers, start, end):
+def _cached_earnings(cache, adapter, tickers, start, end, *, request_delay_s=1.0):
+    """Load earnings per ticker, reusing the disk cache (fetch-once). Uncached
+    tickers are fetched one at a time with a small polite delay between requests
+    (handles any per-minute sub-limit); on the first rate-limit we stop fetching
+    for this run rather than hammering an exhausted daily quota. Whatever is
+    fetched is cached permanently, so re-running on a later day resumes where the
+    quota left off until the whole universe is cached."""
     out: list[EarningsAnnouncement] = []
-    to_fetch: list[str] = []
+    rate_limited = False
     for ticker in tickers:
         cached = cache.get(f"earnings:{ticker}")
-        if cached is None:
-            to_fetch.append(ticker)
-        else:
+        if cached is not None:
             out.extend(
                 EarningsAnnouncement(**row)
                 for row in cached
                 if start.isoformat() <= row["report_date"] <= end.isoformat()
             )
-    if to_fetch:
+            continue
+        if rate_limited:
+            # Daily quota already exhausted this run; skip the rest (they'd just
+            # return rate_limited). They stay uncached and resume on a later day.
+            continue
         fetched, errors = adapter.get_earnings_history(
-            tickers=to_fetch, start=date(2000, 1, 1), end=end
+            tickers=[ticker], start=date(2000, 1, 1), end=end
         )
         for err in errors:
             print(f"  earnings error: {err.error_type.value} {err.symbol or ''}")
-        by_ticker: dict[str, list[dict]] = {}
-        for ann in fetched:
-            by_ticker.setdefault(ann.ticker, []).append(ann.model_dump(mode="json"))
-        for ticker, rows in by_ticker.items():
-            cache.put(f"earnings:{ticker}", rows)
-        out.extend(a for a in fetched if start <= a.report_date <= end)
+            if err.error_type.value == "rate_limited":
+                rate_limited = True
+        if fetched:
+            cache.put(
+                f"earnings:{ticker}",
+                [a.model_dump(mode="json") for a in fetched],
+            )
+            out.extend(a for a in fetched if start <= a.report_date <= end)
+        if not rate_limited:
+            time.sleep(request_delay_s)
     return out
 
 

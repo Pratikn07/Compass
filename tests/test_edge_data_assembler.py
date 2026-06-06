@@ -127,3 +127,31 @@ def test_as_of_anchors_to_prior_trading_day_for_monday_report() -> None:
     assert ctx.as_of_date == date(2024, 6, 28)   # Friday, not Sunday 06-30
     assert ctx.underlying_price == 100.0
     assert ctx.realized_move is not None          # not silently dropped
+
+
+def test_as_of_price_for_returns_prior_trading_day_and_close() -> None:
+    from prescient.edge.data.assembler import as_of_price_for
+
+    bars = {
+        "MU": [
+            _bar("MU", date(2024, 6, 27), 98.0),
+            _bar("MU", date(2024, 6, 28), 100.0),  # Friday: prior trading day to 07-01
+            _bar("MU", date(2024, 7, 1), 103.0),
+        ]
+    }
+    # report Monday 2024-07-01 -> calendar prior Sunday 06-30 -> last trading day 06-28
+    result = as_of_price_for("MU", date(2024, 7, 1), bars)
+    assert result == (date(2024, 6, 28), 100.0)
+
+
+def test_as_of_price_for_none_when_no_prior_bar() -> None:
+    from prescient.edge.data.assembler import as_of_price_for
+
+    assert as_of_price_for("MU", date(2024, 7, 1), {}) is None
+
+
+def test_as_of_price_for_none_when_close_missing() -> None:
+    from prescient.edge.data.assembler import as_of_price_for
+
+    bars = {"MU": [_bar("MU", date(2024, 6, 28), None)]}
+    assert as_of_price_for("MU", date(2024, 7, 1), bars) is None

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import timedelta
+from datetime import date, timedelta
 from typing import Sequence
 
 from prescient.data.models import DailyBarSnapshot
@@ -8,6 +8,26 @@ from prescient.edge.data.models import AssembledEdgeDataset, EarningsAnnouncemen
 from prescient.edge.data.peer_signals import build_peer_signals
 from prescient.edge.loader import PointInTimeDataset, build_event_context
 from prescient.edge.models import OptionQuote
+
+
+def as_of_price_for(
+    ticker: str,
+    report_date: date,
+    bars: dict[str, list[DailyBarSnapshot]],
+) -> tuple[date, float] | None:
+    """The (as_of_date, underlying_close) for an event: the last trading day on/before
+    report_date - 1 calendar day, and its close. Returns None when no prior bar exists
+    or the close is missing. Single source of truth for the as-of price (used to pick
+    the ATM strike and matching the EventContext's underlying price)."""
+    dataset = PointInTimeDataset(bars=bars, option_quotes={})
+    calendar_prior = report_date - timedelta(days=1)
+    visible = dataset.bars_as_of(ticker, as_of_date=calendar_prior)
+    if not visible:
+        return None
+    last = visible[-1]
+    if last.close is None:
+        return None
+    return last.trading_date, last.close
 
 
 def assemble_edge_dataset(

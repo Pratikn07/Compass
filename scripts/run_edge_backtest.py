@@ -8,16 +8,6 @@ Usage:
 
 Caches earnings history on disk (fetch-once) under .cache/edge/.
 Propose-only research tooling: it never places, sizes, or suggests a trade.
-
-KNOWN LIMITATION (blocks meaningful option metrics until resolved):
-The live Alpaca option reader (prescient.live_data.alpaca_readers) fetches only
-the CURRENT, CALL-only active chain. The implied move needs an as-of-date ATM
-CALL+PUT straddle, so with this reader every event scores `not_evaluable /
-missing_implied_move` and the scorecards show 0 evaluable option events. A real
-run therefore measures NOTHING on the option axis yet. Resolving this needs a
-historical-options reader (Alpaca get_option_bars per expired contract, both
-CALL and PUT, stamped with the true historical quote date) -- scoped as the next
-sub-project. Stock-side coverage (earnings spine, bars, peer signals) is real now.
 """
 
 from __future__ import annotations
@@ -30,7 +20,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 from prescient.data.alpaca_market import AlpacaMarketDataAdapter
-from prescient.edge.data.assembler import assemble_edge_dataset
+from prescient.edge.data.assembler import as_of_price_for, assemble_edge_dataset
 from prescient.edge.data.bars_loader import load_daily_bars
 from prescient.edge.data.cache import JsonFileCache
 from prescient.edge.data.earnings_history import AlphaVantageEarningsHistoryAdapter
@@ -43,7 +33,10 @@ from prescient.edge.strategy import (
     ReactionAwarePeerStrategy,
 )
 from prescient.edge.universe import load_edge_universe
-from prescient.live_data.alpaca_readers import build_alpaca_sdk_readers
+from prescient.live_data.alpaca_readers import (
+    build_alpaca_sdk_readers,
+    build_historical_option_reader,
+)
 
 _HORIZON_DAYS = 2
 _PEER_WINDOW_DAYS = 21
@@ -130,8 +123,22 @@ def main() -> None:
         target_events = target_events[: args.limit]
         print(f"Limited to {len(target_events)} most-recent events for smoke test.")
 
+    hist_reader = build_historical_option_reader(
+        api_key_id=alpaca_id, api_secret_key=alpaca_secret
+    )
+    hist_adapter = AlpacaMarketDataAdapter(historical_option_reader=hist_reader)
+
+    as_of_prices: dict[tuple[str, date], tuple[date, float]] = {}
+    for event in target_events:
+        priced = as_of_price_for(event.ticker, event.report_date, bars)
+        if priced is not None:
+            as_of_prices[(event.ticker, event.report_date)] = priced
+
     option_quotes = load_option_quotes_for_events(
-        alpaca, events=target_events, max_expiration_days=_MAX_EXPIRATION_DAYS
+        hist_adapter,
+        events=target_events,
+        as_of_prices=as_of_prices,
+        max_expiration_days=_MAX_EXPIRATION_DAYS,
     )
     print(f"Tickers with option quotes: {len(option_quotes)}")
 

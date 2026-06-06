@@ -31,6 +31,7 @@ class Prediction(BaseModel):
     predicted_move_pct: float
     confidence: float = Field(ge=0.0, le=1.0)
     source: str
+    sell_straddle: bool = False
 
     @field_validator("ticker")
     @classmethod
@@ -139,6 +140,7 @@ class EventScore(BaseModel):
     realized_move_pct: float | None = None
     option_pnl: OptionPnl | None = None
     confidence: float | None = None
+    stayed_within_implied: bool | None = None
 
     @field_validator("ticker")
     @classmethod

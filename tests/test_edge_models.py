@@ -67,3 +67,31 @@ def test_realized_and_event_score_normalize_ticker() -> None:
         ticker="nvda", as_of_date=date(2024, 6, 25), source="x", evaluable=False,
     )
     assert es.ticker == "NVDA"
+
+
+def test_prediction_sell_straddle_defaults_false_and_settable() -> None:
+    from datetime import date
+    from prescient.edge.models import Prediction, PredictionDirection
+
+    p = Prediction(
+        ticker="MU", as_of_date=date(2024, 6, 25),
+        direction=PredictionDirection.NONE, predicted_move_pct=0.0,
+        confidence=0.5, source="short_vol",
+    )
+    assert p.sell_straddle is False
+    p2 = Prediction(
+        ticker="MU", as_of_date=date(2024, 6, 25),
+        direction=PredictionDirection.NONE, predicted_move_pct=0.0,
+        confidence=0.5, source="short_vol", sell_straddle=True,
+    )
+    assert p2.sell_straddle is True
+
+
+def test_event_score_stayed_within_implied_defaults_none() -> None:
+    from datetime import date
+    from prescient.edge.models import EventScore
+
+    s = EventScore(
+        ticker="MU", as_of_date=date(2024, 6, 25), source="x", evaluable=False,
+    )
+    assert s.stayed_within_implied is None

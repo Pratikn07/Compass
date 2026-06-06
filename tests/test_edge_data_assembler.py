@@ -69,3 +69,31 @@ def test_drops_event_without_asof_price() -> None:
     assert result.event_contexts == []
     assert result.events_dropped == 1
     assert result.drop_reasons.get("no_event_context", 0) == 1
+
+
+def test_non_target_announcements_are_not_counted_or_assembled() -> None:
+    from prescient.edge.data.assembler import assemble_edge_dataset
+
+    # NVDA is present as an announcement but NOT in target_tickers -> it must not be
+    # a target event (not counted in events_total, no context built for it).
+    announcements = [
+        EarningsAnnouncement(ticker="MU", report_date=date(2024, 6, 26),
+                             surprise_pct=20.8),
+        EarningsAnnouncement(ticker="NVDA", report_date=date(2024, 6, 12),
+                             surprise_pct=8.0),
+    ]
+    bars = {
+        "MU": [
+            _bar("MU", date(2024, 6, 25), 100.0),
+            _bar("MU", date(2024, 6, 26), 103.0),
+            _bar("MU", date(2024, 6, 27), 106.0),
+        ],
+    }
+    option_quotes = {"MU": _straddle("MU", date(2024, 6, 25))}
+    result = assemble_edge_dataset(
+        announcements=announcements, bars=bars, option_quotes=option_quotes,
+        target_tickers=["MU"], horizon_days=2, peer_window_days=21,
+    )
+    # only MU is a target -> events_total counts 1, and the single context is MU
+    assert result.events_total == 1
+    assert [c.ticker for c in result.event_contexts] == ["MU"]

@@ -19,6 +19,16 @@ def assemble_edge_dataset(
     horizon_days: int,
     peer_window_days: int,
 ) -> AssembledEdgeDataset:
+    """Assemble edge EventContexts (with peer signals) + a coverage summary.
+
+    Network-free: operates on already-fetched announcements/bars/option_quotes so it
+    is fully unit-testable. as_of_date = report_date - 1 day; peer signals are anchored
+    to that same as_of_date so the no-lookahead filter aligns with the event anchor.
+
+    Calls build_peer_signals once per target event with the full announcements list
+    (O(n^2) in event count). Acceptable for offline, cached backtest assembly; if it
+    ever becomes a bottleneck, pre-group announcements by time window.
+    """
     dataset = PointInTimeDataset(bars=bars, option_quotes=option_quotes)
     targets = {t.strip().upper() for t in target_tickers}
 

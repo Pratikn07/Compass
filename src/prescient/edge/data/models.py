@@ -44,8 +44,10 @@ class EarningsAnnouncement(BaseModel):
 class AssembledEdgeDataset(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid", arbitrary_types_allowed=True)
 
-    # event_contexts and dataset hold edge types; kept as objects to avoid importing
-    # frozen scoring models into this layer's public schema.
+    # event_contexts and dataset hold edge types; typed as object to avoid importing
+    # frozen scoring models into this layer's public schema. Actual runtime types:
+    # event_contexts is list[prescient.edge.models.EventContext];
+    # dataset is prescient.edge.loader.PointInTimeDataset.
     event_contexts: list[object]
     dataset: object
     events_total: int

@@ -17,7 +17,10 @@ from __future__ import annotations
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from datetime import date, datetime
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Any, Literal
+
+if TYPE_CHECKING:
+    from prescient.edge.models import OptionQuote
 
 from prescient.data.models import (
     DailyBarSnapshot,
@@ -111,6 +114,54 @@ class AlpacaMarketDataAdapter:
                 open_interest=entry.open_interest,
             )
             for entry in in_window
+        ]
+
+    def get_atm_option_quotes(
+        self,
+        *,
+        underlying_symbol: str,
+        quote_date: date,
+        earnings_date: date,
+        max_expiration_date: date,
+        feed: Feed = "indicative",
+    ) -> list["OptionQuote"]:
+        """Return CALL and PUT quotes (with strikes) in the expiration window, as
+        edge OptionQuotes stamped with quote_date. Strike-preserving and both
+        types - unlike get_option_chain_snapshots which drops strike and keeps
+        CALLs only. The edge import is local to keep prescient.data free of a
+        module-load-time dependency on prescient.edge (one-way layering)."""
+        from prescient.edge.models import OptionQuote
+
+        symbol = underlying_symbol.strip().upper()
+        if self._option_chain_reader is None:
+            self._record(
+                DataProviderErrorType.PROVIDER_UNAVAILABLE,
+                "Alpaca option-chain reader is not configured.",
+                symbol=symbol,
+            )
+            return []
+
+        try:
+            entries = self._option_chain_reader(
+                underlying_symbol=symbol, feed=feed
+            )
+        except Exception as exc:
+            self._record(*_classify(exc), symbol=symbol)
+            return []
+
+        return [
+            OptionQuote(
+                ticker=symbol,
+                option_type=entry.option_type,
+                strike=entry.strike_price,
+                expiration_date=entry.expiration_date,
+                quote_date=quote_date,
+                bid=entry.bid,
+                ask=entry.ask,
+                open_interest=entry.open_interest,
+            )
+            for entry in entries
+            if earnings_date <= entry.expiration_date <= max_expiration_date
         ]
 
     def get_daily_bars(

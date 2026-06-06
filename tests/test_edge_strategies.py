@@ -56,3 +56,19 @@ def test_reaction_aware_peer_none_when_no_peers() -> None:
     )
     assert pred.direction == PredictionDirection.NONE
     assert pred.confidence == 0.0
+
+
+def test_short_vol_strategy_is_non_directional_sell() -> None:
+    from datetime import date
+    from prescient.edge.models import EventContext, PredictionDirection
+    from prescient.edge.strategy import ShortVolStrategy
+
+    ctx = EventContext(
+        ticker="MU", earnings_date=date(2024, 6, 26), as_of_date=date(2024, 6, 25),
+        underlying_price=100.0,
+    )
+    pred = ShortVolStrategy().predict(ctx)
+    assert pred.source == "short_vol"
+    assert pred.direction == PredictionDirection.NONE
+    assert pred.sell_straddle is True
+    assert 0.0 <= pred.confidence <= 1.0

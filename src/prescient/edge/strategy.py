@@ -82,3 +82,22 @@ class ReactionAwarePeerStrategy:
             confidence=confidence,
             source=self.source,
         )
+
+
+class ShortVolStrategy:
+    """Non-directional: bets the realized move stays below the implied move, by
+    SELLING the ATM straddle (defined-risk in the P&L model). It does not predict
+    up/down; it always wants to sell vol when a straddle exists."""
+
+    source = "short_vol"
+
+    def predict(self, context: EventContext) -> Prediction:
+        return Prediction(
+            ticker=context.ticker,
+            as_of_date=context.as_of_date,
+            direction=PredictionDirection.NONE,
+            predicted_move_pct=0.0,
+            confidence=0.5,
+            source=self.source,
+            sell_straddle=True,
+        )

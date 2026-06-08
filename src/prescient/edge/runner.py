@@ -40,6 +40,15 @@ def run_edge_backtest(
 
     both_baselines_present = all(name in raw for name in _BASELINE_SOURCES)
 
+    # NOTE (denominator caveat): survival compares average_option_return_pct across
+    # strategies, but the buy strategies measure return on PREMIUM while short_vol
+    # measures return on CAPITAL-AT-RISK (W). These denominators differ, so the
+    # comparison is imperfect. The bias is conservative: premium-based buy returns
+    # are larger-scaled, making the bar HARDER for short_vol, never easier. For a
+    # disprove-first tool this is the safe direction (it never fabricates a
+    # "survived"); but a short_vol "not survived" should be read with this caveat,
+    # not as proof the vol premium is absent. Normalizing denominators would require
+    # an invented leverage factor, so we document rather than fabricate one.
     best_baseline_return = max(
         (
             raw[name].average_option_return_pct or 0.0

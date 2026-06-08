@@ -92,11 +92,12 @@ def test_runner_marks_survived_when_beats_both_baselines_with_enough_events() ->
                 confidence=0.5, source=self.source,
             )
 
-    # 200 events, all big UP moves (+12% > implied 8%): reaction_aware_peer beats
-    # implied every time (100%); FlipDown predicts DOWN so never beats on the up move
-    # (0%); NoTrade predicts NONE so beat_implied is None (no beat-implied data -> rate
-    # None, treated as 0 by the runner's baseline max). Strategy clears both baselines
-    # with MODERATE sample size -> survived True.
+    # 200 events, all big UP moves (+12% > implied 8%): reaction_aware_peer predicts
+    # UP so it wins strongly on every event (positive option returns); FlipDown
+    # predicts DOWN so it loses on every up move (negative returns); NoTrade predicts
+    # NONE so no directional trade (also loses to IV crush). The UP strategy's average
+    # option return is strongly positive and beats both baselines' average return by
+    # the survival margin. MODERATE sample size -> survived True.
     contexts = [
         _ctx("MU", 12.0, date(2024, 1, 1) + timedelta(days=i))
         for i in range(200)

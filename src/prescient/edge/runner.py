@@ -12,7 +12,7 @@ from prescient.edge.scorer import score_event
 from prescient.edge.strategy import Strategy
 
 _BASELINE_SOURCES = ("coin_flip", "always_up")
-_SURVIVAL_MARGIN_PCT = 2.0  # must beat best baseline beat-implied rate by >= 2 points
+_SURVIVAL_MARGIN_PCT = 2.0  # must beat best baseline AVERAGE return by >= 2 points
 
 
 class EdgeBacktestResult(BaseModel):
@@ -40,9 +40,9 @@ def run_edge_backtest(
 
     both_baselines_present = all(name in raw for name in _BASELINE_SOURCES)
 
-    best_baseline_rate = max(
+    best_baseline_return = max(
         (
-            raw[name].beat_implied_rate or 0.0
+            raw[name].average_option_return_pct or 0.0
             for name in _BASELINE_SOURCES
             if name in raw
         ),
@@ -54,15 +54,13 @@ def run_edge_backtest(
         if source in _BASELINE_SOURCES:
             finalized[source] = card.model_copy(update={"survived": None})
             continue
-        rate = card.beat_implied_rate
         avg_return = card.average_option_return_pct
         survived = (
             both_baselines_present
-            and rate is not None
             and card.sample_size_verdict != SampleSizeVerdict.TOO_FEW
-            and rate >= best_baseline_rate + _SURVIVAL_MARGIN_PCT
             and avg_return is not None
             and avg_return > 0.0
+            and avg_return >= best_baseline_return + _SURVIVAL_MARGIN_PCT
         )
         notes = list(card.notes)
         if not both_baselines_present:
@@ -72,8 +70,7 @@ def run_edge_backtest(
             )
         elif not survived:
             notes.append(
-                "Did not clearly beat baselines on beat-implied with positive "
-                "return - not tradeable."
+                "Did not clearly beat baselines on average return - not tradeable."
             )
         finalized[source] = card.model_copy(
             update={"survived": survived, "notes": notes}

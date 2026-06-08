@@ -222,3 +222,72 @@ def test_runner_does_not_survive_when_return_is_negative() -> None:
     # If average return is negative, must NOT survive even if it sometimes beats implied.
     if card.average_option_return_pct is not None and card.average_option_return_pct <= 0:
         assert card.survived is False
+
+
+def test_short_vol_survives_when_beats_baselines_on_return() -> None:
+    from datetime import date, timedelta
+    from prescient.edge.models import Prediction, PredictionDirection
+    from prescient.edge.runner import run_edge_backtest
+
+    class WinVol:
+        source = "short_vol"
+        def predict(self, context):
+            return Prediction(ticker=context.ticker, as_of_date=context.as_of_date,
+                              direction=PredictionDirection.NONE, predicted_move_pct=0.0,
+                              confidence=0.5, source=self.source, sell_straddle=True)
+
+    class FlipDown:
+        source = "coin_flip"
+        def predict(self, context):
+            return Prediction(ticker=context.ticker, as_of_date=context.as_of_date,
+                              direction=PredictionDirection.DOWN, predicted_move_pct=0.0,
+                              confidence=0.5, source=self.source)
+
+    class Up:
+        source = "always_up"
+        def predict(self, context):
+            return Prediction(ticker=context.ticker, as_of_date=context.as_of_date,
+                              direction=PredictionDirection.UP, predicted_move_pct=0.0,
+                              confidence=0.5, source=self.source)
+
+    # tiny moves every time -> short vol profits, directional baselines lose to IV crush
+    contexts = [_ctx("MU", 0.5, date(2024, 1, 1) + timedelta(days=i)) for i in range(200)]
+    result = run_edge_backtest(contexts=contexts, strategies=[WinVol(), FlipDown(), Up()])
+    card = result.scorecards["short_vol"]
+    assert card.average_option_return_pct is not None
+    assert card.survived is True
+
+
+def test_losing_directional_still_does_not_survive_under_generalized_rule() -> None:
+    from datetime import date, timedelta
+    from prescient.edge.models import Prediction, PredictionDirection
+    from prescient.edge.runner import run_edge_backtest
+
+    class AlwaysUpPredict:
+        source = "reaction_aware_peer"
+        def predict(self, context):
+            return Prediction(ticker=context.ticker, as_of_date=context.as_of_date,
+                              direction=PredictionDirection.UP, predicted_move_pct=10.0,
+                              confidence=0.8, source=self.source)
+
+    class Flip:
+        source = "coin_flip"
+        def predict(self, context):
+            return Prediction(ticker=context.ticker, as_of_date=context.as_of_date,
+                              direction=PredictionDirection.UP, predicted_move_pct=0.0,
+                              confidence=0.5, source=self.source)
+
+    class Up:
+        source = "always_up"
+        def predict(self, context):
+            return Prediction(ticker=context.ticker, as_of_date=context.as_of_date,
+                              direction=PredictionDirection.UP, predicted_move_pct=0.0,
+                              confidence=0.5, source=self.source)
+
+    contexts = []
+    for i in range(200):
+        pct = -8.0 if i % 4 else -2.0
+        contexts.append(_ctx("MU", pct, date(2024, 1, 1) + timedelta(days=i)))
+    result = run_edge_backtest(
+        contexts=contexts, strategies=[AlwaysUpPredict(), Flip(), Up()])
+    assert result.scorecards["reaction_aware_peer"].survived is False

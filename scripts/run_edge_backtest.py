@@ -32,6 +32,7 @@ from prescient.edge.strategy import (
     AlwaysUpStrategy,
     CoinFlipStrategy,
     ReactionAwarePeerStrategy,
+    ShortVolStrategy,
 )
 from prescient.edge.universe import load_edge_universe
 from prescient.live_data.alpaca_readers import (
@@ -172,6 +173,7 @@ def main() -> None:
         contexts=result.event_contexts,
         strategies=[
             ReactionAwarePeerStrategy(),
+            ShortVolStrategy(),
             CoinFlipStrategy(),
             AlwaysUpStrategy(),
         ],

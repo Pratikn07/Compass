@@ -38,6 +38,7 @@ def assemble_edge_dataset(
     target_tickers: Sequence[str],
     horizon_days: int,
     peer_window_days: int,
+    vol_ramp_quotes: dict[tuple[str, date], list[OptionQuote]] | None = None,
 ) -> AssembledEdgeDataset:
     """Assemble edge EventContexts (with peer signals) + a coverage summary.
 
@@ -90,11 +91,27 @@ def assemble_edge_dataset(
             bars=bars,
             peer_window_days=peer_window_days,
         )
-        contexts.append(
-            ctx.model_copy(
-                update={"peer_eps_surprises": surprises, "peer_stock_reactions": reactions}
-            )
+        ctx = ctx.model_copy(
+            update={"peer_eps_surprises": surprises, "peer_stock_reactions": reactions}
         )
+        # Thread strike-locked vol-ramp quotes (entry call/put + exit call/put)
+        # when present for this event. No-lookahead holds by construction: entry
+        # quotes are stamped on the entry trading day, strictly before as_of_date,
+        # and the vol-ramp P&L never reads a post-event price. The existing
+        # atm_call/atm_put (exit-ATM) stay untouched.
+        ramp = (vol_ramp_quotes or {}).get((ann.ticker, ann.report_date))
+        if ramp is not None and len(ramp) == 4:
+            entry_call, entry_put, exit_call, exit_put = ramp
+            ctx = ctx.model_copy(
+                update={
+                    "entry_as_of_date": entry_call.quote_date,
+                    "vol_ramp_entry_call": entry_call,
+                    "vol_ramp_entry_put": entry_put,
+                    "vol_ramp_exit_call": exit_call,
+                    "vol_ramp_exit_put": exit_put,
+                }
+            )
+        contexts.append(ctx)
 
     return AssembledEdgeDataset(
         event_contexts=contexts,

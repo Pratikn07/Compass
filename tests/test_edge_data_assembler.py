@@ -129,6 +129,95 @@ def test_as_of_anchors_to_prior_trading_day_for_monday_report() -> None:
     assert ctx.realized_move is not None          # not silently dropped
 
 
+def _vol_ramp_quotes(t, entry_d, exit_d):
+    def q(ot, d, close):
+        return OptionQuote(ticker=t, option_type=ot, strike=100.0,
+                           expiration_date=date(2024, 6, 28), quote_date=d,
+                           bid=close, ask=close)
+
+    return [
+        q("CALL", entry_d, 2.0), q("PUT", entry_d, 2.1),
+        q("CALL", exit_d, 3.0), q("PUT", exit_d, 3.2),
+    ]
+
+
+def _mu_announcement_and_data():
+    announcements = [
+        EarningsAnnouncement(ticker="MU", report_date=date(2024, 6, 26),
+                             surprise_pct=20.8),
+    ]
+    bars = {
+        "MU": [
+            _bar("MU", date(2024, 6, 18), 98.0),
+            _bar("MU", date(2024, 6, 24), 99.0),
+            _bar("MU", date(2024, 6, 25), 100.0),
+            _bar("MU", date(2024, 6, 26), 103.0),
+            _bar("MU", date(2024, 6, 27), 106.0),
+        ],
+    }
+    option_quotes = {"MU": _straddle("MU", date(2024, 6, 25))}
+    return announcements, bars, option_quotes
+
+
+def test_assembler_threads_vol_ramp_quotes_into_context() -> None:
+    from prescient.edge.data.assembler import assemble_edge_dataset
+
+    announcements, bars, option_quotes = _mu_announcement_and_data()
+    entry_d, exit_d = date(2024, 6, 18), date(2024, 6, 25)
+    vol_ramp = {("MU", date(2024, 6, 26)): _vol_ramp_quotes("MU", entry_d, exit_d)}
+
+    result = assemble_edge_dataset(
+        announcements=announcements, bars=bars, option_quotes=option_quotes,
+        target_tickers=["MU"], horizon_days=2, peer_window_days=21,
+        vol_ramp_quotes=vol_ramp,
+    )
+    assert len(result.event_contexts) == 1
+    ctx = result.event_contexts[0]
+    assert ctx.entry_as_of_date == entry_d
+    assert ctx.vol_ramp_entry_call is not None
+    assert ctx.vol_ramp_entry_call.bid == 2.0
+    assert ctx.vol_ramp_entry_put.bid == 2.1
+    assert ctx.vol_ramp_exit_call.bid == 3.0
+    assert ctx.vol_ramp_exit_put.bid == 3.2
+    # No-lookahead invariant: entry strictly before exit, exit before earnings.
+    assert ctx.entry_as_of_date < ctx.as_of_date < ctx.earnings_date
+    # Existing exit-ATM quotes are untouched.
+    assert ctx.atm_call is not None and ctx.atm_call.bid == 3.9
+
+
+def test_assembler_without_vol_ramp_quotes_is_unchanged() -> None:
+    from prescient.edge.data.assembler import assemble_edge_dataset
+
+    announcements, bars, option_quotes = _mu_announcement_and_data()
+    kwargs = dict(
+        announcements=announcements, bars=bars, option_quotes=option_quotes,
+        target_tickers=["MU"], horizon_days=2, peer_window_days=21,
+    )
+    default_run = assemble_edge_dataset(**kwargs)
+    explicit_none = assemble_edge_dataset(**kwargs, vol_ramp_quotes=None)
+    assert default_run.event_contexts == explicit_none.event_contexts
+    ctx = default_run.event_contexts[0]
+    assert ctx.entry_as_of_date is None
+    assert ctx.vol_ramp_entry_call is None
+
+
+def test_assembler_event_without_vol_ramp_entry_gets_none_fields() -> None:
+    from prescient.edge.data.assembler import assemble_edge_dataset
+
+    announcements, bars, option_quotes = _mu_announcement_and_data()
+    vol_ramp = {("OTHER", date(2024, 6, 26)): _vol_ramp_quotes(
+        "OTHER", date(2024, 6, 18), date(2024, 6, 25),
+    )}
+    result = assemble_edge_dataset(
+        announcements=announcements, bars=bars, option_quotes=option_quotes,
+        target_tickers=["MU"], horizon_days=2, peer_window_days=21,
+        vol_ramp_quotes=vol_ramp,
+    )
+    ctx = result.event_contexts[0]
+    assert ctx.entry_as_of_date is None
+    assert ctx.vol_ramp_entry_call is None
+
+
 def test_as_of_price_for_returns_prior_trading_day_and_close() -> None:
     from prescient.edge.data.assembler import as_of_price_for
 

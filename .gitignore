@@ -7,6 +7,11 @@
 __pycache__/
 *.pyc
 .venv/
+.pytest_cache/
+.ruff_cache/
+
+# Fetch-once HTTP cache (rebuildable)
+.cache/
 
 # OS
 .DS_Store

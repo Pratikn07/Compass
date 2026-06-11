@@ -18,7 +18,7 @@ from datetime import date
 
 import httpx
 
-from .adapters import alpaca, alphavantage, yahoo
+from .adapters import alpaca, alphavantage, edgar, yahoo
 from .cache import JsonFileCache
 from .config import DEVELOPMENT_START
 from .store import Store, make_client
@@ -85,6 +85,33 @@ def backfill(source: str, tickers_arg: list[str] | None) -> None:
                     )
                     print(f"[{i}/{len(tickers)}] {ticker}: ERROR {exc}")
                 time.sleep(0.3)  # politeness; cached re-runs skip this loop's fetches
+
+        if source == "fundamentals-edgar":
+            # Official, key-less SEC source covering members Alpha Vantage
+            # hasn't reached. Tickers with existing rows are skipped so AV's
+            # richer rows (EPS surprise) are never clobbered by EDGAR's.
+            have = {
+                r["ticker"]
+                for r in _fetch_all(store.client, "compass_fundamentals", "ticker")
+            }
+            cik_map = edgar.fetch_ticker_cik_map(cache, client)
+            todo = [t for t in tickers if t in member_tickers and t not in have]
+            for i, ticker in enumerate(todo, 1):
+                cik = cik_map.get(ticker)
+                if cik is None:
+                    print(f"[{i}/{len(todo)}] {ticker}: no CIK (skipped)")
+                    continue
+                try:
+                    rows = edgar.fetch_fundamentals(ticker, cik, cache, client)
+                    n = store.upsert_fundamentals(rows)
+                    store.log_run(source="edgar", ticker=ticker, records=n, status="ok")
+                    print(f"[{i}/{len(todo)}] {ticker}: {n} quarters")
+                except Exception as exc:  # noqa: BLE001
+                    store.log_run(
+                        source="edgar", ticker=ticker, records=0,
+                        status="error", error=str(exc)[:500],
+                    )
+                    print(f"[{i}/{len(todo)}] {ticker}: ERROR {exc}")
 
         if source in ("fundamentals", "all"):
             fund_tickers = [t for t in tickers if t in member_tickers]
@@ -233,7 +260,11 @@ def main() -> None:
     sub = parser.add_subparsers(dest="command", required=True)
 
     p_backfill = sub.add_parser("backfill", help="seed universe and ingest data")
-    p_backfill.add_argument("--source", choices=["prices", "fundamentals", "all"], default="all")
+    p_backfill.add_argument(
+        "--source",
+        choices=["prices", "fundamentals", "fundamentals-edgar", "all"],
+        default="all",
+    )
     p_backfill.add_argument("--tickers", nargs="*", default=None)
 
     p_cross = sub.add_parser("crosscheck", help="Yahoo vs Alpaca adjusted-close comparison")

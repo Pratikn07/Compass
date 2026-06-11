@@ -1,0 +1,166 @@
+{
+  "grid": [
+    {
+      "lookback": 60,
+      "gap": 0.2,
+      "hold": 63,
+      "n": 235,
+      "mean_excess": -0.010462719287977299,
+      "base_rate": 0.502127659574468,
+      "survived": false
+    },
+    {
+      "lookback": 60,
+      "gap": 0.2,
+      "hold": 126,
+      "n": 204,
+      "mean_excess": -0.002242868188626835,
+      "base_rate": 0.5098039215686274,
+      "survived": false
+    },
+    {
+      "lookback": 60,
+      "gap": 0.25,
+      "hold": 63,
+      "n": 204,
+      "mean_excess": -0.005476253987426125,
+      "base_rate": 0.5294117647058824,
+      "survived": false
+    },
+    {
+      "lookback": 60,
+      "gap": 0.25,
+      "hold": 126,
+      "n": 180,
+      "mean_excess": 0.005413169862370658,
+      "base_rate": 0.5388888888888889,
+      "survived": false
+    },
+    {
+      "lookback": 60,
+      "gap": 0.3,
+      "hold": 63,
+      "n": 173,
+      "mean_excess": 0.0014640671844906336,
+      "base_rate": 0.5317919075144508,
+      "survived": false
+    },
+    {
+      "lookback": 60,
+      "gap": 0.3,
+      "hold": 126,
+      "n": 154,
+      "mean_excess": 0.01054811956582136,
+      "base_rate": 0.5454545454545454,
+      "survived": false
+    },
+    {
+      "lookback": 90,
+      "gap": 0.2,
+      "hold": 63,
+      "n": 379,
+      "mean_excess": -0.006635357351187102,
+      "base_rate": 0.49868073878627966,
+      "survived": false
+    },
+    {
+      "lookback": 90,
+      "gap": 0.2,
+      "hold": 126,
+      "n": 316,
+      "mean_excess": 0.0006260992472567327,
+      "base_rate": 0.5,
+      "survived": false
+    },
+    {
+      "lookback": 90,
+      "gap": 0.25,
+      "hold": 63,
+      "n": 317,
+      "mean_excess": -0.004839119340114861,
+      "base_rate": 0.501577287066246,
+      "survived": false
+    },
+    {
+      "lookback": 90,
+      "gap": 0.25,
+      "hold": 126,
+      "n": 268,
+      "mean_excess": -0.0018959330048028656,
+      "base_rate": 0.503731343283582,
+      "survived": false
+    },
+    {
+      "lookback": 90,
+      "gap": 0.3,
+      "hold": 63,
+      "n": 271,
+      "mean_excess": -0.0008159700267172694,
+      "base_rate": 0.5350553505535055,
+      "survived": false
+    },
+    {
+      "lookback": 90,
+      "gap": 0.3,
+      "hold": 126,
+      "n": 231,
+      "mean_excess": 0.00020754864043399845,
+      "base_rate": 0.5194805194805194,
+      "survived": false
+    },
+    {
+      "lookback": 120,
+      "gap": 0.2,
+      "hold": 63,
+      "n": 503,
+      "mean_excess": -0.0052740887403370604,
+      "base_rate": 0.5089463220675944,
+      "survived": false
+    },
+    {
+      "lookback": 120,
+      "gap": 0.2,
+      "hold": 126,
+      "n": 378,
+      "mean_excess": 0.0001449111491196855,
+      "base_rate": 0.5079365079365079,
+      "survived": false
+    },
+    {
+      "lookback": 120,
+      "gap": 0.25,
+      "hold": 63,
+      "n": 440,
+      "mean_excess": -0.00290454769248775,
+      "base_rate": 0.5159090909090909,
+      "survived": false
+    },
+    {
+      "lookback": 120,
+      "gap": 0.25,
+      "hold": 126,
+      "n": 328,
+      "mean_excess": 0.003966669914515779,
+      "base_rate": 0.5091463414634146,
+      "survived": false
+    },
+    {
+      "lookback": 120,
+      "gap": 0.3,
+      "hold": 63,
+      "n": 366,
+      "mean_excess": -0.0026358360289300067,
+      "base_rate": 0.5409836065573771,
+      "survived": false
+    },
+    {
+      "lookback": 120,
+      "gap": 0.3,
+      "hold": 126,
+      "n": 272,
+      "mean_excess": 0.004000499963937943,
+      "base_rate": 0.5183823529411765,
+      "survived": false
+    }
+  ]
+}

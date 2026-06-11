@@ -53,13 +53,39 @@ hypothesis that would need its own pre-registered spec, not a re-run.
 
 **Validation:** NOT run. One-shot, awaiting owner go-ahead (rulebook §5.3).
 
-## H2 / H3 — blocked by the fundamentals gate (working as designed)
+## H2 financial reality — development verdict: SURVIVED (at the 6-month horizon)
 
-The runner refuses to judge: fundamentals coverage is 17.1% of dev-window
-member-quarters (gate: 70%), 57 tickers still unfetched under Alpha Vantage's
-25-requests/day cap. Resume daily with
-`uv run python -m compass.ingest backfill --source fundamentals` (~5 runs);
-the gate lifts itself when coverage crosses 70%.
+Gate lifted 2026-06-11 at 76.0% member-quarter coverage after the EDGAR
+companyfacts source was added by owner decision (banks-payments 52% and
+data-centers-power 68% remain under 70% — shrink-the-claim noted on their
+contribution; the AV loop keeps improving them).
+
+Quarterly theme rankings by fundamentals (rev growth, margin delta, surprise
+z-scores), forward basket returns after costs, 2006–2019:
+
+| Horizon | Top | Middle | Bottom | Spread (ann.) | Monotonic | Survived |
+|---|---|---|---|---|---|---|
+| 126d | 11.5% | 9.9% | 9.5% | **+4.2%/yr** | yes | **yes** |
+| 63d | 6.3% | 4.5% | 5.3% | +4.0%/yr | **no** (middle < bottom) | no |
+
+Sensitivity: 3 of 4 grid cells pass (126d median, 126d mean, 63d mean); only
+63d-median breaks monotonicity. The effect exists across the grid — not a
+single-point artifact. Sample: 41–42 quarters (`suggestive`, honesty cap).
+**The honest reading:** themes with real, accelerating fundamentals beat
+hype themes over the *next six months* by ~4 points a year — a ranking edge,
+not a get-rich signal, and it must still pass one-shot validation.
+
+## H3 laggard radar — development verdict: FAILED (cleanly)
+
+The "MU ran, so buy SanDisk" idea, tested honestly: 268 trades (`moderate`
+sample), mean excess vs just holding the theme basket: **−0.19%**, base rate
+50.4%, 95% CI [44%, 56%] — indistinguishable from a coin flip. The
+sensitivity grid is unambiguous: **dead at all 18 parameter combinations**
+(lookback 60/90/120 × gap 20/25/30pts × hold 63/126d).
+
+The market is not slow at the months timescale either: laggards lag for a
+reason about exactly as often as they catch up. The fundamentals-comparability
+filter did not separate the two. H3 is recorded as FAILED and ships in no app.
 
 ## Reproduction
 

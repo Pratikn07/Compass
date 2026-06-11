@@ -1,0 +1,32 @@
+{
+  "grid": [
+    {
+      "horizon": 63,
+      "aggregation": "median",
+      "spread_annualized": 0.040250163838535524,
+      "monotonic": false,
+      "survived": false
+    },
+    {
+      "horizon": 63,
+      "aggregation": "mean",
+      "spread_annualized": 0.057618522072669265,
+      "monotonic": true,
+      "survived": true
+    },
+    {
+      "horizon": 126,
+      "aggregation": "median",
+      "spread_annualized": 0.041735101310806016,
+      "monotonic": true,
+      "survived": true
+    },
+    {
+      "horizon": 126,
+      "aggregation": "mean",
+      "spread_annualized": 0.027102242992783437,
+      "monotonic": true,
+      "survived": true
+    }
+  ]
+}

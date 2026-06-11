@@ -39,10 +39,17 @@ built around what survives, not around what feels right.
 - **H1 development: partial.** Broad theme-trend claim failed (6/8 ETFs lose
   on after-tax Sharpe); only XLF survived robustly across the sensitivity
   grid. Crash protection (drawdown bar) passed almost everywhere — taxes ate
-  the rest. Full record: [`docs/phase2-results.md`](docs/phase2-results.md)
-- H2/H3: implemented + tested; the runner **refuses to judge** until
-  fundamentals coverage ≥70% (currently 17%)
-- Validation (2020→present): one-shot, not yet run, owner go-ahead required
+  the rest
+- **H2 development: SURVIVED at the 6-month horizon** (+4.2%/yr top-vs-bottom
+  theme spread, monotonic, robust in 3/4 sweep cells; 41 quarters,
+  `suggestive`). Fundamentals gate lifted at 76% coverage via the EDGAR
+  companyfacts source (owner decision 2026-06-11)
+- **H3 development: FAILED** — 268 laggard trades, base rate 50.4% (coin
+  flip), dead at all 18 sensitivity grid points. The laggard radar ships in
+  no app
+- Full record: [`docs/phase2-results.md`](docs/phase2-results.md)
+- Validation (2020→present): one-shot, not yet run for H1/H2, owner
+  go-ahead required
 
 Commands: `compass.ingest` (backfill / crosscheck / coverage) and
 `compass.backtest.runner` (calibrate / develop / sweep / validate), both via

@@ -34,18 +34,33 @@ ex-dividend dates where the providers' adjustment timing differs by a day.
 Acceptable for monthly-evaluation strategies (H1–H3 never trade on a single
 day's adjustment artifact).
 
-## Fundamentals coverage — IN PROGRESS (Alpha Vantage 25 req/day cap)
+## Fundamentals coverage — GATE LIFTED 2026-06-11 (75.97% total)
 
-12 of 74 members ingested so far (ai-chips theme complete at 97.7% of
-member-quarters in the development window; ai-memory-storage at 71.2%).
-Remaining 62 members ≈ 124 requests ≈ **5 more daily resumed runs** of
-`uv run python -m compass.ingest backfill --source fundamentals` — the
-fetch-once cache and clean rate-limit stop make each resume free of repeat
-requests.
+The Alpha Vantage-only path (25 req/day) was projected at ~5 more days; by
+owner decision (2026-06-11) the **SEC EDGAR companyfacts API** was added as a
+fundamentals source (official, free, key-less, filing-date-stamped — see
+`src/compass/adapters/edgar.py`). One 49-second run covered 57 missing
+members. Coverage in the development window (2006–2019, member-quarters):
 
-The < 70% themes flagged today reflect *not-yet-fetched* tickers, not missing
-history; the verdict on whether the shrink-the-claim rule (rulebook §6)
-actually applies waits until the backfill completes.
+| Theme | Coverage | Note |
+|---|---|---|
+| ai-chips | 97.7% | |
+| cybersecurity | 97.8% | |
+| airlines-travel | 82.9% | |
+| big-box-retail | 82.1% | |
+| cloud-software | 78.8% | |
+| energy | 73.9% | |
+| healthcare-glp1 | 72.3% | |
+| ai-memory-storage | 71.2% | |
+| **data-centers-power** | **67.6%** | below 70% — shrink-the-claim applies |
+| **banks-payments** | **52.5%** | below 70% — banks report revenue under non-standard XBRL tags (GS 0q, WFC 15q, JPM 26q, MS 29q); the AV loop is filling these |
+| **TOTAL** | **76.0%** | ≥ 70% gate: **PASSED** |
+
+XBRL's 2007–2009 mandate start means pre-2009 quarters are structurally
+thinner everywhere — recorded, not fudged. EPS estimates/surprise exist only
+in Alpha Vantage data (analyst data is not in SEC filings); the 6-hourly AV
+loop keeps filling those fields. H2 scoring averages whatever metrics exist
+per member.
 
 ## Spot checks
 

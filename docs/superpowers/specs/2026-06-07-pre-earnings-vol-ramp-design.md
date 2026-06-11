@@ -1,7 +1,9 @@
 # Pre-Earnings Vol-Ramp Strategy — Design
 
 **Date:** 2026-06-07
-**Status:** Design (awaiting user review)
+**Status:** Implemented 2026-06-10 (plan: `docs/superpowers/plans/2026-06-10-pre-earnings-vol-ramp.md`); spec synced to the strike-locked context fields. Two deviations from the original draft, both correctness-driven:
+1. **Strike-locked exit quotes.** The original §4 read the exit value from the context's existing `atm_call`/`atm_put`, but those are ATM **at exit** — after ~5 days of drift they can be a different contract than the one bought at entry, violating this spec's own strike-consistency rule (and overwriting them would change the implied move for every other strategy). The implementation carries FOUR dedicated fields on `EventContext` instead: `vol_ramp_entry_call/put` (stamped `entry_as_of_date`) and `vol_ramp_exit_call/put` (same strike+expiration, stamped `as_of_date`). `atm_call`/`atm_put` are untouched.
+2. **No SDK reader changes.** The existing `historical_option_reader` lists contracts by expiration window independent of the as-of date, so `get_historical_vol_ramp_straddle` simply calls it twice (entry day, exit day) — `live_data/alpaca_readers.py` was not modified.
 **Sub-project:** A new direction-free strategy + P&L model on the existing edge harness,
 testing whether a small account can profit by **buying the ATM straddle ~1 week before
 earnings and selling it the day before the report** — capturing the rise in implied
@@ -112,22 +114,25 @@ round-trip drag), so the cost assumption is consistent with the rest of the harn
 2. **`models.py`**:
    - `Prediction` — add `buy_vol_ramp: bool = False` (defaults false → existing strategies
      untouched).
-   - `EventContext` — add `entry_as_of_date: date | None = None`,
-     `entry_atm_call: OptionQuote | None = None`, `entry_atm_put: OptionQuote | None = None`
-     (all default None → existing construction unaffected; the existing `atm_call`/`atm_put`
-     remain the exit-side, day-before-earnings quotes).
+   - `EventContext` — add `entry_as_of_date: date | None = None` plus FOUR strike-locked
+     quote fields: `vol_ramp_entry_call/put` (stamped `entry_as_of_date`) and
+     `vol_ramp_exit_call/put` (same strike+expiration, stamped `as_of_date`). All default
+     None → existing construction unaffected; the existing `atm_call`/`atm_put` remain the
+     exit-side ATM quotes used for the implied move and the through-earnings strategies.
 3. **`strategy.py`** — add `VolRampStrategy`: emits `direction=NONE, buy_vol_ramp=True,
    confidence=0.5`. Non-directional by design. It also declares a class attribute
    `exits_before_event = True` (existing strategies implicitly False) so the runner can
    apply the correct survival bar (see §5).
 4. **`scorer.py`** — add a vol-ramp branch: when `prediction.buy_vol_ramp` and all four
-   entry+exit ATM legs exist, compute `entry_premium = entry_atm_call.bid + entry_atm_put.bid`
+   `vol_ramp_*` legs exist, compute
+   `entry_premium = vol_ramp_entry_call.bid + vol_ramp_entry_put.bid`
    (history stamps bid == ask == close, so either field is the close) and
-   `exit_value = atm_call.bid + atm_put.bid`, then set
-   `option_pnl = simulate_vol_ramp_pnl(...)`. `direction_correct`,
+   `exit_value = vol_ramp_exit_call.bid + vol_ramp_exit_put.bid` — the SAME contracts,
+   priced the day before earnings — then set `option_pnl = simulate_vol_ramp_pnl(...)`.
+   Missing any leg → `not_evaluable_reason="missing_vol_ramp_straddle"`. `direction_correct`,
    `beat_implied`, and `stayed_within_implied` stay **None** (non-directional, non-event).
-   `implied_move_pct`/`realized_move_pct` may still be reported as diagnostics from the
-   exit-side quotes but are NOT used in this strategy's P&L. The directional and sell-vol
+   `implied_move_pct`/`realized_move_pct` are still reported as diagnostics from the
+   exit-ATM quotes but are NOT used in this strategy's P&L. The directional and sell-vol
    branches are untouched (explicit no-regression test).
 5. **`runner.py`** — generalize the survival bar by strategy type, WITHOUT weakening the
    existing gate:
@@ -147,29 +152,29 @@ round-trip drag), so the cost assumption is consistent with the rest of the harn
    - **Why this is not weakening:** the do-nothing bar applies ONLY to strategies that take
      no event/direction risk; every existing strategy keeps the strict beat-the-baselines
      bar. The new bar is additive and clearly scoped, not a relaxation of the old one.
-6. **Data assembly (`prescient.edge.data`)** — fetch the entry straddle in addition to the
-   exit straddle:
+6. **Data assembly (`prescient.edge.data`)** — fetch the strike-locked entry+exit straddle:
    - **`alpaca_market.py`** — add `get_historical_vol_ramp_straddle(*, underlying_symbol,
      entry_as_of_date, exit_as_of_date, entry_underlying_price, earnings_date,
-     max_expiration_date) -> list[OptionQuote]`. It picks the ATM strike+expiration using
-     `entry_underlying_price` at `entry_as_of_date` (same nearest-strike, lower-strike-tie
-     rule as `get_historical_atm_straddle`), then returns FOUR quotes for that SAME
-     strike+expiration: entry call, entry put (stamped `entry_as_of_date`), exit call, exit
-     put (stamped `exit_as_of_date`), each priced at its bar close. Returns `[]` on any
-     missing piece (no contracts, missing a leg, missing either close) — skip, never guess.
-   - **`live_data/alpaca_readers.py`** — extend the historical reader so it can return bars
-     for a specific strike across a date range (entry→exit), or add a sibling reader. SDK
-     imports stay in-function; bars sorted; fail loud on unknown option type (same hardening
-     as the existing reader).
+     max_expiration_date) -> list[OptionQuote]`. It calls the EXISTING
+     `historical_option_reader` twice (once per as-of date), picks the **earliest in-window
+     expiration** then the ATM strike using `entry_underlying_price` (nearest-strike,
+     lower-strike-tie rule), and returns FOUR quotes for that SAME strike+expiration:
+     entry call, entry put (stamped `entry_as_of_date`), exit call, exit put (stamped
+     `exit_as_of_date`), each priced at its bar close. Returns `[]` on any missing piece
+     (no contracts, missing a leg, missing either close) — skip, never guess.
+   - **`live_data/alpaca_readers.py`** — **unchanged.** The existing reader lists contracts
+     by expiration window independent of the as-of date, so two calls cover entry and exit.
    - **`option_loader.py`** — add `load_vol_ramp_straddles_for_events(...)` that, per event,
-     computes `entry_as_of_date` from the bars (the trading day closest to
-     `entry_lead_trading_days` before earnings), looks up the entry-day underlying close,
-     calls `get_historical_vol_ramp_straddle`, and returns the four quotes keyed by ticker.
-     Skips an event when the entry-day price or either straddle leg is missing.
-   - **`assembler.py`** — thread the entry quotes into `EventContext.entry_as_of_date`,
-     `entry_atm_call`, `entry_atm_put` (the existing exit-side quotes stay as `atm_call`/
-     `atm_put`). No-lookahead holds: entry quotes use only entry-day data, exit quotes use
-     only day-before-earnings data, and the vol-ramp P&L reads NO post-event price at all.
+     derives the entry day from the bar history (the trading day `entry_lead_trading_days`
+     bars before the exit as-of day — never a calendar subtraction), looks up the entry-day
+     underlying close, calls `get_historical_vol_ramp_straddle`, and returns the four quotes
+     keyed by `(ticker, report_date)`. Skips an event when the as-of price, entry-day close,
+     bar history depth, or any straddle leg is missing.
+   - **`assembler.py`** — accepts `vol_ramp_quotes` (default None → unchanged behavior) and
+     threads the four quotes into `EventContext.entry_as_of_date` + the `vol_ramp_*` fields
+     (the existing exit-ATM quotes stay as `atm_call`/`atm_put`). No-lookahead holds: entry
+     quotes use only entry-day data, exit quotes use only day-before-earnings data, and the
+     vol-ramp P&L reads NO post-event price at all.
 7. **`run_edge_backtest.py`** — wire the entry-straddle fetch and add `VolRampStrategy()` to
    the strategy list so the live scorecard includes a `vol_ramp` row alongside the existing
    strategies.

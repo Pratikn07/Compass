@@ -262,6 +262,109 @@ class AlpacaMarketDataAdapter:
             ),
         ]
 
+    def get_historical_vol_ramp_straddle(
+        self,
+        *,
+        underlying_symbol: str,
+        entry_as_of_date: date,
+        exit_as_of_date: date,
+        entry_underlying_price: float,
+        earnings_date: date,
+        max_expiration_date: date,
+    ) -> list["OptionQuote"]:
+        """Return the strike-locked vol-ramp straddle for a past earnings event:
+        [entry CALL, entry PUT, exit CALL, exit PUT], all the SAME strike and
+        expiration. The ATM strike is chosen at ENTRY (nearest strike to
+        entry_underlying_price within the EARLIEST in-window expiration; ties
+        resolve to the lower strike) and that same contract pair is priced again
+        at exit. Reuses the existing historical_option_reader, called once per
+        as-of date. Returns [] on any missing piece - skip, never guess."""
+        from prescient.edge.models import OptionQuote
+
+        symbol = underlying_symbol.strip().upper()
+        if self._historical_option_reader is None:
+            self._record(
+                DataProviderErrorType.PROVIDER_UNAVAILABLE,
+                "Alpaca historical-option reader is not configured.",
+                symbol=symbol,
+            )
+            return []
+        try:
+            entry_rows = self._historical_option_reader(
+                underlying_symbol=symbol,
+                as_of_date=entry_as_of_date,
+                earnings_date=earnings_date,
+                max_expiration_date=max_expiration_date,
+            )
+            exit_rows = self._historical_option_reader(
+                underlying_symbol=symbol,
+                as_of_date=exit_as_of_date,
+                earnings_date=earnings_date,
+                max_expiration_date=max_expiration_date,
+            )
+        except Exception as exc:
+            self._record(*_classify(exc), symbol=symbol)
+            return []
+
+        entry_in_window = [
+            row
+            for row in entry_rows
+            if earnings_date <= row.expiration_date <= max_expiration_date
+            and row.close is not None
+        ]
+        entry_calls = [r for r in entry_in_window if r.option_type == "CALL"]
+        entry_puts = [r for r in entry_in_window if r.option_type == "PUT"]
+        if not entry_calls or not entry_puts:
+            return []
+
+        # Earliest in-window expiration carries the most concentrated earnings
+        # vol; pick the ATM strike within it from the entry-day CALL strikes.
+        expiration = min(r.expiration_date for r in entry_calls)
+        calls_at_exp = [r for r in entry_calls if r.expiration_date == expiration]
+        atm_strike = min(
+            (r.strike for r in calls_at_exp),
+            key=lambda s: (abs(s - entry_underlying_price), s),
+        )
+
+        def _leg(rows: list["HistoricalOptionRow"], option_type: str):
+            return next(
+                (
+                    r
+                    for r in rows
+                    if r.option_type == option_type
+                    and r.strike == atm_strike
+                    and r.expiration_date == expiration
+                    and r.close is not None
+                ),
+                None,
+            )
+
+        entry_call = _leg(entry_in_window, "CALL")
+        entry_put = _leg(entry_in_window, "PUT")
+        exit_call = _leg(list(exit_rows), "CALL")
+        exit_put = _leg(list(exit_rows), "PUT")
+        if None in (entry_call, entry_put, exit_call, exit_put):
+            return []
+
+        def _quote(row: "HistoricalOptionRow", quote_date: date) -> "OptionQuote":
+            return OptionQuote(
+                ticker=symbol,
+                option_type=row.option_type,
+                strike=atm_strike,
+                expiration_date=expiration,
+                quote_date=quote_date,
+                bid=row.close,
+                ask=row.close,
+                open_interest=row.open_interest,
+            )
+
+        return [
+            _quote(entry_call, entry_as_of_date),
+            _quote(entry_put, entry_as_of_date),
+            _quote(exit_call, exit_as_of_date),
+            _quote(exit_put, exit_as_of_date),
+        ]
+
     def get_daily_bars(
         self,
         *,

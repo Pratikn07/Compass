@@ -170,6 +170,108 @@ def test_sell_vol_big_move_not_stayed_within_and_capped_loss() -> None:
     assert s.option_pnl.net_pnl < 0
 
 
+def _vr_quote(option_type, quote_date, close):
+    return OptionQuote(
+        ticker="MU", option_type=option_type, strike=100.0,
+        expiration_date=date(2024, 7, 19), quote_date=quote_date,
+        bid=close, ask=close,
+    )
+
+
+def _vr_ctx(**overrides):
+    entry_d, exit_d = date(2024, 6, 18), date(2024, 6, 25)
+    base = dict(
+        ticker="MU", earnings_date=date(2024, 6, 26), as_of_date=exit_d,
+        underlying_price=100.0, atm_call=_quote("CALL"), atm_put=_quote("PUT"),
+        entry_as_of_date=entry_d,
+        vol_ramp_entry_call=_vr_quote("CALL", entry_d, 2.0),
+        vol_ramp_entry_put=_vr_quote("PUT", entry_d, 2.0),
+        vol_ramp_exit_call=_vr_quote("CALL", exit_d, 3.0),
+        vol_ramp_exit_put=_vr_quote("PUT", exit_d, 3.0),
+        realized_move=RealizedMove(
+            ticker="MU", pre_report_close=100.0, post_report_close=103.0,
+            realized_move_pct=3.0,
+        ),
+    )
+    base.update(overrides)
+    return EventContext(**base)
+
+
+def _vr_pred():
+    return Prediction(
+        ticker="MU", as_of_date=date(2024, 6, 25),
+        direction=PredictionDirection.NONE, predicted_move_pct=0.0,
+        confidence=0.5, source="vol_ramp", buy_vol_ramp=True,
+    )
+
+
+def test_score_vol_ramp_computes_pnl_from_entry_and_exit_straddles() -> None:
+    from prescient.edge.scorer import score_event
+
+    # entry 2.0+2.0=4.0 ; exit 3.0+3.0=6.0 ; 5%/side haircut:
+    # net = 6*0.95 - 4*1.05 = 1.5 -> 37.5% on premium
+    s = score_event(prediction=_vr_pred(), context=_vr_ctx())
+    assert s.evaluable is True
+    assert s.direction_correct is None
+    assert s.beat_implied is None
+    assert s.stayed_within_implied is None
+    assert s.option_pnl is not None
+    assert s.option_pnl.return_pct == pytest.approx(37.5)
+    # implied/realized are reported as diagnostics only
+    assert s.implied_move_pct == pytest.approx(8.0)
+    assert s.realized_move_pct == pytest.approx(3.0)
+
+
+def test_score_vol_ramp_decayed_exit_is_negative() -> None:
+    from prescient.edge.scorer import score_event
+
+    exit_d = date(2024, 6, 25)
+    ctx = _vr_ctx(
+        vol_ramp_exit_call=_vr_quote("CALL", exit_d, 1.5),
+        vol_ramp_exit_put=_vr_quote("PUT", exit_d, 1.5),
+    )
+    s = score_event(prediction=_vr_pred(), context=ctx)
+    assert s.evaluable is True
+    assert s.option_pnl is not None
+    assert s.option_pnl.return_pct < 0
+
+
+def test_score_vol_ramp_missing_leg_not_evaluable() -> None:
+    from prescient.edge.scorer import score_event
+
+    for missing in (
+        "vol_ramp_entry_call", "vol_ramp_entry_put",
+        "vol_ramp_exit_call", "vol_ramp_exit_put",
+    ):
+        s = score_event(prediction=_vr_pred(), context=_vr_ctx(**{missing: None}))
+        assert s.evaluable is False
+        assert s.not_evaluable_reason == "missing_vol_ramp_straddle"
+        assert s.option_pnl is None
+
+
+def test_score_directional_and_sell_vol_ignore_vol_ramp_fields() -> None:
+    # NO-REGRESSION: a context WITH vol-ramp quotes must score identically for
+    # the directional and sell-vol branches as one without them.
+    from prescient.edge.scorer import score_event
+
+    ctx_with = _vr_ctx()
+    ctx_without = _vr_ctx(
+        entry_as_of_date=None,
+        vol_ramp_entry_call=None, vol_ramp_entry_put=None,
+        vol_ramp_exit_call=None, vol_ramp_exit_put=None,
+    )
+    directional = _pred(PredictionDirection.UP)
+    sell_vol = Prediction(
+        ticker="MU", as_of_date=date(2024, 6, 25),
+        direction=PredictionDirection.NONE, predicted_move_pct=0.0,
+        confidence=0.5, source="short_vol", sell_straddle=True,
+    )
+    for pred in (directional, sell_vol):
+        a = score_event(prediction=pred, context=ctx_with)
+        b = score_event(prediction=pred, context=ctx_without)
+        assert a == b
+
+
 def test_directional_scoring_unchanged_no_regression() -> None:
     from datetime import date
     from prescient.edge.models import (

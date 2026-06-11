@@ -328,6 +328,49 @@ avg / −12.5% median — none survived.)
    beautiful" die in real trading. The vol-ramp P&L crosses the spread twice on purpose. When in
    doubt, make the cost assumption hurt.
 
+*Lessons 9–13 added 2026-06-10, after the vol-ramp verdict closed the loop.*
+
+9. **A cost problem cannot be fixed with a timing parameter.** The vol-ramp's median loss
+   (−12.5%) was almost exactly the modeled round-trip spread (~10%) plus theta. That means the
+   ramp EXISTS and is FULLY PRICED IN — the middleman collects it. When the median loss equals
+   transaction costs, no entry-day sweep (3 vs 5 vs 10 days) can rescue the strategy; sweeping
+   parameters on 67 events until one looks positive would only manufacture an overfit. The one
+   legitimate follow-up is better COST data (real bid/ask instead of the 5%/side haircut), not
+   more strategy variants.
+
+10. **Verify the spec against the code before implementing it.** The vol-ramp spec contradicted
+    itself: its scorer section priced the exit at the day-before-earnings ATM quotes, while its
+    own strike-consistency rule required selling the SAME contract bought at entry (after ~5
+    days of drift those can differ). Implementing the spec as written would have modeled a
+    position never held AND silently changed the implied move for every other strategy. The fix
+    (dedicated strike-locked `vol_ramp_*` context fields) was found by reading the actual
+    loader code during planning — not by re-reading the spec. Corollary: prefer reusing an
+    existing primitive over extending one (the historical reader called twice covered entry and
+    exit; the planned SDK change was never needed).
+
+11. **The survival bar must match the risk actually taken.** A strategy that exits before the
+    event takes no event risk and no directional risk, so its honest comparator is DOING
+    NOTHING (zero + margin) — not the coin-flip/always-up baselines, which held through
+    earnings and rode bull-market drift. Comparing against the wrong baseline can both flatter
+    and unfairly kill a strategy. The generalized gate is additive and regression-tested so the
+    old verdicts cannot drift.
+
+12. **The repeatable winners in options are not guessing direction.** Who profits durably:
+    market makers (the spread we kept paying), industrial vol-sellers (hedged across hundreds
+    of names — the version of short-vol a small account cannot run, per §6.2), research-driven
+    funds using options only as the delivery vehicle for an edge earned elsewhere, and
+    tail-hedgers who bleed for years to be paid in crashes. "Buy calls on a hunch" appears
+    nowhere on that list — it is the product those firms sell. The get-rich screenshots are
+    survivorship bias: the visible few winners drawn from an invisible ocean of losers.
+
+13. **Contributions dominate returns for years — protect the habit first, the pile later.** At
+    ~$2k/month of fresh savings, a strategy that beats the market by 5 points earns ~$600 in
+    year one while deposits add $24,000 (the saving habit is ~40x more powerful). Returns and
+    contributions reach parity only around year 8–10 (~$300k). Implication for any future
+    system: its highest-value features early are consistency and self-sabotage prevention (not
+    alpha), and its highest-value feature later is drawdown avoidance — losing 45% requires
+    +82% to recover, so sidestepping one crash outweighs a decade of clever trades.
+
 ---
 
 ## 8. Operating constraints (carried forward, non-negotiable)
@@ -380,6 +423,43 @@ trading, until a strategy actually survives. The deal holds: **evidence override
 
 ---
 
+## 9.1 The next chapter — direction chosen, not yet specced (2026-06-10)
+
+After the verdict, the owner asked the forward-looking question directly: *"what should our
+app be if I keep investing about $2,000 every month?"* The direction that emerged (option 3
+above — change the game, not the tactic) is a **personal wealth autopilot**, shaped by lesson
+13's math:
+
+- **The Core (~85% of every deposit):** a small basket of cheap index ETFs with a
+  trend-following seatbelt (e.g. invested above the ~200-day average, defensive below) —
+  the one active overlay with decades of out-of-sample evidence. Goal: market-like returns
+  with materially smaller drawdowns. Deposits never stop; only their destination shifts.
+- **The Lab (≤15%, hard-capped in code):** where experiments live. ANY candidate strategy
+  must pass this harness's gates first (backtest survival → paper trading → small). The cap
+  means the lab can go to zero without touching the retirement math.
+- **The Firewall (the real product):** deposit autopilot on the 1st of the month
+  (propose-only, human clicks), an override log that prices what each act of panic/greed
+  cost, drawdown screens with historical base rates instead of red numbers, a long-horizon
+  projection cone, and a 48-hour cooling-off rule for any change to the rules themselves.
+
+**Validation gates for the Core's backtester (before trusting it):** it must reproduce
+PUBLISHED results for trend/momentum on known periods; develop on pre-2020 data, validate
+once on 2020→present; report parameter sensitivity (an edge that works at 200 days but dies
+at 180 is noise). Survival bar: beat buy-and-hold on risk-adjusted return after costs and a
+tax-drag haircut — not raw return.
+
+**Status:** direction agreed in conversation; no spec or plan exists yet. Next concrete step
+is a brainstorm → spec cycle for "Core + deposit autopilot, slice 1." The vanta repo is the
+leading candidate home (fresh name, fresh purpose — see `vanta/README.md`); prescient remains
+the research harness and governance layer either way.
+
+**Realistic expectation recorded honestly:** at $2k/month and ordinary-to-good outcomes,
+roughly $300–400k around year 10 and $1M+ on a ~20-year horizon — mostly from the deposits
+themselves. The system's job is to make sure none of it is donated to market makers or to a
+panicked Tuesday.
+
+---
+
 ## 10. Appendix — key artifacts
 
 **Specs (`docs/superpowers/specs/`):**
@@ -387,7 +467,8 @@ trading, until a strategy actually survives. The deal holds: **evidence override
 - `2026-06-05-edge-live-data-assembly-design.md` — sub-project 2
 - `2026-06-05-historical-options-reader-design.md` — sub-project 3
 - `2026-06-06-short-vol-defined-risk-design.md` — short-vol experiment
-- `2026-06-07-pre-earnings-vol-ramp-design.md` — vol-ramp experiment (awaiting review)
+- `2026-06-07-pre-earnings-vol-ramp-design.md` — vol-ramp experiment (implemented 2026-06-10;
+  plan: `docs/superpowers/plans/2026-06-10-pre-earnings-vol-ramp.md`; verdict in §6.3)
 
 **Code:**
 - `src/prescient/edge/` — frozen scoring core

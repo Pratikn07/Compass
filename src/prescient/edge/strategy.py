@@ -84,6 +84,26 @@ class ReactionAwarePeerStrategy:
         )
 
 
+class VolRampStrategy:
+    """Direction-free pre-earnings vol-ramp: buy the ATM straddle ~5 trading days
+    before the report, sell the SAME contracts the day before. Exits before the
+    event by construction (never eats IV crush, never predicts direction)."""
+
+    source = "vol_ramp"
+    exits_before_event = True
+
+    def predict(self, context: EventContext) -> Prediction:
+        return Prediction(
+            ticker=context.ticker,
+            as_of_date=context.as_of_date,
+            direction=PredictionDirection.NONE,
+            predicted_move_pct=0.0,
+            confidence=0.5,
+            source=self.source,
+            buy_vol_ramp=True,
+        )
+
+
 class ShortVolStrategy:
     """Non-directional: bets the realized move stays below the implied move, by
     SELLING the ATM straddle (defined-risk in the P&L model). It does not predict

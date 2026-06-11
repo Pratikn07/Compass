@@ -72,3 +72,27 @@ def test_short_vol_strategy_is_non_directional_sell() -> None:
     assert pred.direction == PredictionDirection.NONE
     assert pred.sell_straddle is True
     assert 0.0 <= pred.confidence <= 1.0
+
+
+def test_vol_ramp_strategy_emits_non_directional_vol_ramp_prediction() -> None:
+    from prescient.edge.strategy import VolRampStrategy
+
+    pred = VolRampStrategy().predict(_ctx())
+    assert pred.source == "vol_ramp"
+    assert pred.direction == PredictionDirection.NONE
+    assert pred.buy_vol_ramp is True
+    assert pred.sell_straddle is False
+    assert pred.confidence == 0.5
+
+
+def test_vol_ramp_strategy_declares_exit_before_event() -> None:
+    from prescient.edge.strategy import (
+        ReactionAwarePeerStrategy,
+        ShortVolStrategy,
+        VolRampStrategy,
+    )
+
+    assert VolRampStrategy.exits_before_event is True
+    # Existing strategies implicitly hold through the event.
+    assert getattr(ReactionAwarePeerStrategy, "exits_before_event", False) is False
+    assert getattr(ShortVolStrategy, "exits_before_event", False) is False

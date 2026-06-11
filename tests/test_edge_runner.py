@@ -259,6 +259,127 @@ def test_short_vol_survives_when_beats_baselines_on_return() -> None:
     assert card.survived is True
 
 
+def _vr_quote(ot, quote_date, close):
+    return OptionQuote(
+        ticker="MU", option_type=ot, strike=100.0,
+        expiration_date=date(2024, 7, 19), quote_date=quote_date,
+        bid=close, ask=close,
+    )
+
+
+def _vr_ctx(realized_pct, as_of, *, entry_close=2.0, exit_close=3.0):
+    from datetime import timedelta
+
+    entry_d = as_of - timedelta(days=7)
+    return EventContext(
+        ticker="MU", earnings_date=as_of + timedelta(days=1), as_of_date=as_of,
+        underlying_price=100.0, atm_call=_quote("CALL"), atm_put=_quote("PUT"),
+        entry_as_of_date=entry_d,
+        vol_ramp_entry_call=_vr_quote("CALL", entry_d, entry_close),
+        vol_ramp_entry_put=_vr_quote("PUT", entry_d, entry_close),
+        vol_ramp_exit_call=_vr_quote("CALL", as_of, exit_close),
+        vol_ramp_exit_put=_vr_quote("PUT", as_of, exit_close),
+        peer_eps_surprises={"X": 5.0}, peer_stock_reactions={"X": 1.0},
+        realized_move=RealizedMove(
+            ticker="MU", pre_report_close=100.0,
+            post_report_close=100.0 * (1 + realized_pct / 100.0),
+            realized_move_pct=realized_pct,
+        ),
+    )
+
+
+def _vol_ramp_and_baselines():
+    from prescient.edge.strategy import (
+        AlwaysUpStrategy,
+        CoinFlipStrategy,
+        VolRampStrategy,
+    )
+
+    return [VolRampStrategy(), CoinFlipStrategy(), AlwaysUpStrategy()]
+
+
+def test_vol_ramp_survives_on_do_nothing_bar_even_when_baselines_ride_drift() -> None:
+    from datetime import timedelta
+
+    from prescient.edge.runner import run_edge_backtest
+
+    # Every event: vol ramped (entry 4.0 -> exit 6.0 = +37.5% after double spread)
+    # AND realized +12% so the long-call always_up baseline posts a HUGE average
+    # return (~+195%). Under the through-earnings bar vol_ramp would fail; under
+    # the do-nothing bar it must survive — baselines are diagnostics only.
+    contexts = [
+        _vr_ctx(12.0, date(2024, 1, 1) + timedelta(days=i)) for i in range(200)
+    ]
+    result = run_edge_backtest(
+        contexts=contexts, strategies=_vol_ramp_and_baselines()
+    )
+    card = result.scorecards["vol_ramp"]
+    always_up = result.scorecards["always_up"]
+    assert always_up.average_option_return_pct is not None
+    assert always_up.average_option_return_pct > card.average_option_return_pct
+    assert card.survived is True
+    assert any("do-nothing" in n for n in card.notes)
+
+
+def test_vol_ramp_negative_return_does_not_survive() -> None:
+    from datetime import timedelta
+
+    from prescient.edge.runner import run_edge_backtest
+
+    # Vol decayed: entry 4.0 -> exit 3.0; return is negative every event.
+    contexts = [
+        _vr_ctx(0.5, date(2024, 1, 1) + timedelta(days=i), exit_close=1.5)
+        for i in range(200)
+    ]
+    result = run_edge_backtest(
+        contexts=contexts, strategies=_vol_ramp_and_baselines()
+    )
+    assert result.scorecards["vol_ramp"].survived is False
+
+
+def test_vol_ramp_below_margin_over_zero_does_not_survive() -> None:
+    from datetime import timedelta
+
+    from prescient.edge.runner import run_edge_backtest
+
+    # entry 4.0, exit 4.4632: return = (4.4632*0.95 - 4.2)/4.0 ~= +1.0% < 2.0 margin.
+    contexts = [
+        _vr_ctx(0.5, date(2024, 1, 1) + timedelta(days=i), exit_close=2.2316)
+        for i in range(200)
+    ]
+    result = run_edge_backtest(
+        contexts=contexts, strategies=_vol_ramp_and_baselines()
+    )
+    card = result.scorecards["vol_ramp"]
+    assert card.average_option_return_pct is not None
+    assert 0.0 < card.average_option_return_pct < 2.0
+    assert card.survived is False
+
+
+def test_vol_ramp_too_few_events_does_not_survive() -> None:
+    from prescient.edge.runner import run_edge_backtest
+
+    contexts = [_vr_ctx(0.5, date(2024, 6, 25))]
+    result = run_edge_backtest(
+        contexts=contexts, strategies=_vol_ramp_and_baselines()
+    )
+    assert result.scorecards["vol_ramp"].survived is False
+
+
+def test_vol_ramp_does_not_require_baselines_to_survive() -> None:
+    from datetime import timedelta
+
+    from prescient.edge.runner import run_edge_backtest
+    from prescient.edge.strategy import VolRampStrategy
+
+    # The do-nothing bar is self-contained: no baselines supplied, still survives.
+    contexts = [
+        _vr_ctx(0.5, date(2024, 1, 1) + timedelta(days=i)) for i in range(200)
+    ]
+    result = run_edge_backtest(contexts=contexts, strategies=[VolRampStrategy()])
+    assert result.scorecards["vol_ramp"].survived is True
+
+
 def test_losing_directional_still_does_not_survive_under_generalized_rule() -> None:
     from datetime import date, timedelta
     from prescient.edge.models import Prediction, PredictionDirection

@@ -28,6 +28,7 @@ def run_edge_backtest(
     strategies: list[Strategy],
 ) -> EdgeBacktestResult:
     raw: dict[str, StrategyScorecard] = {}
+    pre_event_sources: set[str] = set()
     for strategy in strategies:
         scores = [
             score_event(prediction=strategy.predict(context), context=context)
@@ -36,6 +37,8 @@ def run_edge_backtest(
         source = getattr(strategy, "source", strategy.__class__.__name__)
         if source in raw:
             raise ValueError(f"Duplicate strategy source: {source!r}")
+        if getattr(strategy, "exits_before_event", False):
+            pre_event_sources.add(source)
         raw[source] = build_scorecard(source=source, scores=scores)
 
     both_baselines_present = all(name in raw for name in _BASELINE_SOURCES)
@@ -66,6 +69,36 @@ def run_edge_backtest(
             finalized[source] = card.model_copy(update={"survived": None})
             continue
         avg_return = card.average_option_return_pct
+
+        if source in pre_event_sources:
+            # Exit-before-event strategies (e.g. vol_ramp) take no event risk and
+            # no directional risk, so the economically correct comparator is DOING
+            # NOTHING (zero return) + the margin — not the drift-inflated
+            # coin_flip/always_up baselines, which hold through earnings. The
+            # baselines are still computed and reported as diagnostics. This bar
+            # is additive and scoped: every through-earnings strategy keeps the
+            # strict beat-the-baselines gate below.
+            survived = (
+                card.sample_size_verdict != SampleSizeVerdict.TOO_FEW
+                and avg_return is not None
+                and avg_return > 0.0
+                and avg_return >= _SURVIVAL_MARGIN_PCT
+            )
+            notes = list(card.notes)
+            notes.append(
+                "Pre-event strategy: survival bar is do-nothing (zero) + margin; "
+                "baselines are diagnostics only (they hold through earnings)."
+            )
+            if not survived:
+                notes.append(
+                    "Did not beat the do-nothing bar on average return - "
+                    "not tradeable."
+                )
+            finalized[source] = card.model_copy(
+                update={"survived": survived, "notes": notes}
+            )
+            continue
+
         survived = (
             both_baselines_present
             and card.sample_size_verdict != SampleSizeVerdict.TOO_FEW

@@ -7,3 +7,5 @@ __pycache__/
 .venv/
 data/raw/
 .DS_Store
+.secrets/
+supabase/.temp/

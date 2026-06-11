@@ -1,0 +1,27 @@
+[project]
+name = "vanta"
+version = "0.1.0"
+description = "Earnings options intelligence — data warehouse foundation"
+requires-python = ">=3.12"
+dependencies = [
+    "supabase>=2.9.0",
+    "requests>=2.32.0",
+    "python-dotenv>=1.0.1",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3.0",
+    "responses>=0.25.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-v"
+
+[tool.uv]
+package = true
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

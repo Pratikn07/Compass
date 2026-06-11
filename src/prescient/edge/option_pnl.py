@@ -45,6 +45,39 @@ def simulate_option_pnl(
     )
 
 
+def simulate_vol_ramp_pnl(
+    *,
+    entry_premium: float,
+    exit_value: float,
+    cost_haircut_pct: float,
+) -> OptionPnl | None:
+    """Hypothetical pre-earnings vol-ramp trade: BUY the ATM straddle ~1 week out,
+    SELL the same contracts the day before the report. Never holds through the
+    event, so it cannot eat IV crush and never predicts direction.
+
+    Honesty model: the spread is crossed TWICE - buy at entry_premium*(1+h), sell
+    at exit_value*(1-h). Theta is implicit in the exit value (a flat/decayed exit
+    simply yields a negative return). Loss floored at -100% of premium. Returns
+    None on non-positive entry premium or exit value.
+    """
+    if entry_premium <= 0 or exit_value <= 0:
+        return None
+
+    buy_cost = entry_premium * (1.0 + cost_haircut_pct)
+    sell_proceeds = exit_value * (1.0 - cost_haircut_pct)
+    cost_haircut = entry_premium * cost_haircut_pct + exit_value * cost_haircut_pct
+    net_pnl = sell_proceeds - buy_cost
+    if net_pnl < -entry_premium:
+        net_pnl = -entry_premium
+    return OptionPnl(
+        entry_premium=entry_premium,
+        exit_value=exit_value,
+        cost_haircut=cost_haircut,
+        net_pnl=net_pnl,
+        return_pct=(net_pnl / entry_premium) * 100.0,
+    )
+
+
 def simulate_capped_short_straddle_pnl(
     *,
     straddle_price: float,

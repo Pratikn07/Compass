@@ -3,6 +3,80 @@ from __future__ import annotations
 import pytest
 
 
+def test_vol_ramp_ramped_exit_beats_double_spread() -> None:
+    from prescient.edge.option_pnl import simulate_vol_ramp_pnl
+
+    # entry 4.0, exit 6.0, haircut 5% per side.
+    # buy cost = 4.0 * 1.05 = 4.2 ; sell proceeds = 6.0 * 0.95 = 5.7
+    # net = 5.7 - 4.2 = 1.5 ; return = 1.5 / 4.0 * 100 = 37.5%
+    pnl = simulate_vol_ramp_pnl(
+        entry_premium=4.0, exit_value=6.0, cost_haircut_pct=0.05
+    )
+    assert pnl is not None
+    assert pnl.entry_premium == pytest.approx(4.0)
+    assert pnl.exit_value == pytest.approx(6.0)
+    assert pnl.cost_haircut == pytest.approx(4.0 * 0.05 + 6.0 * 0.05)  # 0.5
+    assert pnl.net_pnl == pytest.approx(1.5)
+    assert pnl.return_pct == pytest.approx(37.5)
+
+
+def test_vol_ramp_flat_exit_loses_the_double_spread() -> None:
+    from prescient.edge.option_pnl import simulate_vol_ramp_pnl
+
+    # entry 4.0, exit 4.0: net = 4.0*0.95 - 4.0*1.05 = -0.4 -> -10.0%
+    pnl = simulate_vol_ramp_pnl(
+        entry_premium=4.0, exit_value=4.0, cost_haircut_pct=0.05
+    )
+    assert pnl is not None
+    assert pnl.net_pnl == pytest.approx(-0.4)
+    assert pnl.return_pct == pytest.approx(-10.0)
+
+
+def test_vol_ramp_decayed_exit_is_negative_but_floored() -> None:
+    from prescient.edge.option_pnl import simulate_vol_ramp_pnl
+
+    # Massive decay cannot lose more than the premium paid.
+    pnl = simulate_vol_ramp_pnl(
+        entry_premium=4.0, exit_value=0.01, cost_haircut_pct=0.05
+    )
+    assert pnl is not None
+    assert pnl.net_pnl >= -4.0
+    assert pnl.return_pct >= -100.0
+
+
+def test_vol_ramp_zero_haircut_is_pure_difference() -> None:
+    from prescient.edge.option_pnl import simulate_vol_ramp_pnl
+
+    pnl = simulate_vol_ramp_pnl(
+        entry_premium=2.0, exit_value=3.0, cost_haircut_pct=0.0
+    )
+    assert pnl is not None
+    assert pnl.cost_haircut == pytest.approx(0.0)
+    assert pnl.net_pnl == pytest.approx(1.0)
+    assert pnl.return_pct == pytest.approx(50.0)
+
+
+def test_vol_ramp_invalid_inputs_return_none() -> None:
+    from prescient.edge.option_pnl import simulate_vol_ramp_pnl
+
+    assert (
+        simulate_vol_ramp_pnl(entry_premium=0.0, exit_value=3.0, cost_haircut_pct=0.05)
+        is None
+    )
+    assert (
+        simulate_vol_ramp_pnl(entry_premium=-1.0, exit_value=3.0, cost_haircut_pct=0.05)
+        is None
+    )
+    assert (
+        simulate_vol_ramp_pnl(entry_premium=2.0, exit_value=0.0, cost_haircut_pct=0.05)
+        is None
+    )
+    assert (
+        simulate_vol_ramp_pnl(entry_premium=2.0, exit_value=-1.0, cost_haircut_pct=0.05)
+        is None
+    )
+
+
 def test_correct_direction_small_move_still_loses_to_iv_crush() -> None:
     # bought call for 4.00, strike 100, stock rose only to 103 (+3%, under implied 8%)
     from prescient.edge.option_pnl import simulate_option_pnl

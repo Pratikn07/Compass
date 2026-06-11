@@ -1,0 +1,55 @@
+{
+  "grid": [
+    {
+      "sma_n": 150,
+      "frequency": "monthly",
+      "primary_survivors": [
+        "XLF"
+      ],
+      "n_primary": 8
+    },
+    {
+      "sma_n": 175,
+      "frequency": "monthly",
+      "primary_survivors": [
+        "XLF"
+      ],
+      "n_primary": 8
+    },
+    {
+      "sma_n": 200,
+      "frequency": "monthly",
+      "primary_survivors": [
+        "XLF",
+        "XLE"
+      ],
+      "n_primary": 8
+    },
+    {
+      "sma_n": 225,
+      "frequency": "monthly",
+      "primary_survivors": [
+        "XLF",
+        "XLE"
+      ],
+      "n_primary": 8
+    },
+    {
+      "sma_n": 250,
+      "frequency": "monthly",
+      "primary_survivors": [
+        "XLF",
+        "XLE"
+      ],
+      "n_primary": 8
+    },
+    {
+      "sma_n": 200,
+      "frequency": "weekly",
+      "primary_survivors": [
+        "XLF"
+      ],
+      "n_primary": 8
+    }
+  ]
+}

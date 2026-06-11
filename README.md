@@ -27,12 +27,27 @@ built around what survives, not around what feels right.
 
 ## Current status
 
-**Phase 0 — the rulebook.** Documentation only; no code, no database, no API calls.
+**Phase 2 — backtest harness built and calibrated; H1 judged; H2/H3 awaiting data.**
 
-The Phase 0 deliverable is [`docs/specs/2026-06-10-rulebook.md`](docs/specs/2026-06-10-rulebook.md):
-the precise rules for the three hypotheses (H1 theme trend, H2 financial reality,
-H3 laggard radar), the seed universe of themes, the data-source plan, the backtest
-protocol, and the decision gates for every later phase.
+- Rulebook (Phase 0): [`docs/specs/2026-06-10-rulebook.md`](docs/specs/2026-06-10-rulebook.md)
+  — verdict table of record in §5.6
+- Data foundation (Phase 1): price gate **PASSED** (100%, all 85 tickers,
+  2006→present); fundamentals 12/74 members, resuming daily under the Alpha
+  Vantage cap ([`docs/phase1-gate-evidence.md`](docs/phase1-gate-evidence.md))
+- **Referee calibrated** (Phase 2): Faber 10-month SMA on SPY reproduced —
+  9.3% CAGR / −19% maxDD vs 8.0% / −51% buy-and-hold
+- **H1 development: partial.** Broad theme-trend claim failed (6/8 ETFs lose
+  on after-tax Sharpe); only XLF survived robustly across the sensitivity
+  grid. Crash protection (drawdown bar) passed almost everywhere — taxes ate
+  the rest. Full record: [`docs/phase2-results.md`](docs/phase2-results.md)
+- H2/H3: implemented + tested; the runner **refuses to judge** until
+  fundamentals coverage ≥70% (currently 17%)
+- Validation (2020→present): one-shot, not yet run, owner go-ahead required
+
+Commands: `compass.ingest` (backfill / crosscheck / coverage) and
+`compass.backtest.runner` (calibrate / develop / sweep / validate), both via
+`uv run python -m ...`. Prices come from the Yahoo chart API (Stooq is
+bot-walled; deviation recorded in the Phase 1 gate evidence).
 
 ## The phases (from the agreed plan)
 

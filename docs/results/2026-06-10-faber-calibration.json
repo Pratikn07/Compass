@@ -1,0 +1,26 @@
+{
+  "window": ["1993-11-30", "2012-12-31"],
+  "strategy": {
+    "name": "faber-spy",
+    "start": "1993-11-30",
+    "end": "2012-12-31",
+    "cagr": 0.09328811184364261,
+    "sharpe": 0.894595365988683,
+    "max_drawdown": -0.19001308586326993,
+    "n_periods": 229,
+    "final_equity": 5.4077867994027695
+  },
+  "buy_and_hold": {
+    "name": "faber-spy-buy-and-hold",
+    "start": "1993-11-30",
+    "end": "2012-12-31",
+    "cagr": 0.08024398939912447,
+    "sharpe": 0.5819792009025948,
+    "max_drawdown": -0.5078483912523761,
+    "n_periods": 229,
+    "final_equity": 4.300619221421298
+  },
+  "cagr_within_1_5pts": true,
+  "maxdd_le_60pct": true,
+  "passed": true
+}

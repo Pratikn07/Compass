@@ -1,0 +1,311 @@
+{
+  "window": "development",
+  "sma_n": 200,
+  "frequency": "monthly",
+  "verdicts": [
+    {
+      "instrument": "SMH",
+      "label": "etf-primary",
+      "strategy": {
+        "name": "SMH",
+        "start": "2006-02-28",
+        "end": "2019-12-31",
+        "cagr": 0.03415917534207202,
+        "sharpe": 0.2865450145232038,
+        "max_drawdown": -0.292680985023255,
+        "n_periods": 166,
+        "final_equity": 1.540939438840007
+      },
+      "buy_and_hold": {
+        "name": "SMH-buy-and-hold",
+        "start": "2006-02-28",
+        "end": "2019-12-31",
+        "cagr": 0.09852926115793736,
+        "sharpe": 0.5428235395567284,
+        "max_drawdown": -0.5699739893637412,
+        "n_periods": 166,
+        "final_equity": 3.5534724069286465
+      },
+      "months_invested": 116,
+      "months_total": 167,
+      "bar1_sharpe": false,
+      "bar2_drawdown_25pct_smaller": true,
+      "bar3_cagr_within_1pt": false,
+      "survived_development": false
+    },
+    {
+      "instrument": "IGV",
+      "label": "etf-primary",
+      "strategy": {
+        "name": "IGV",
+        "start": "2006-02-28",
+        "end": "2019-12-31",
+        "cagr": 0.056867644454169586,
+        "sharpe": 0.44565340595777286,
+        "max_drawdown": -0.2829884006804525,
+        "n_periods": 166,
+        "final_equity": 2.088969156923699
+      },
+      "buy_and_hold": {
+        "name": "IGV-buy-and-hold",
+        "start": "2006-02-28",
+        "end": "2019-12-31",
+        "cagr": 0.12164884203712178,
+        "sharpe": 0.6977479372561672,
+        "max_drawdown": -0.46455094231095373,
+        "n_periods": 166,
+        "final_equity": 4.758078221998992
+      },
+      "months_invested": 135,
+      "months_total": 167,
+      "bar1_sharpe": false,
+      "bar2_drawdown_25pct_smaller": true,
+      "bar3_cagr_within_1pt": false,
+      "survived_development": false
+    },
+    {
+      "instrument": "CIBR",
+      "label": "etf-primary",
+      "strategy": {
+        "name": "CIBR",
+        "start": "2016-05-31",
+        "end": "2019-12-31",
+        "cagr": 0.09215442160959042,
+        "sharpe": 0.707938055734041,
+        "max_drawdown": -0.19951179497220106,
+        "n_periods": 43,
+        "final_equity": 1.3718268697252902
+      },
+      "buy_and_hold": {
+        "name": "CIBR-buy-and-hold",
+        "start": "2016-05-31",
+        "end": "2019-12-31",
+        "cagr": 0.13679667844441257,
+        "sharpe": 0.8475883237936453,
+        "max_drawdown": -0.1814821415734199,
+        "n_periods": 43,
+        "final_equity": 1.6284684915476102
+      },
+      "months_invested": 38,
+      "months_total": 44,
+      "bar1_sharpe": false,
+      "bar2_drawdown_25pct_smaller": false,
+      "bar3_cagr_within_1pt": false,
+      "survived_development": false
+    },
+    {
+      "instrument": "XLV",
+      "label": "etf-primary",
+      "strategy": {
+        "name": "XLV",
+        "start": "2006-02-28",
+        "end": "2019-12-31",
+        "cagr": 0.06141881667431126,
+        "sharpe": 0.5838468832652779,
+        "max_drawdown": -0.24658340191149108,
+        "n_periods": 166,
+        "final_equity": 2.2910843661684432
+      },
+      "buy_and_hold": {
+        "name": "XLV-buy-and-hold",
+        "start": "2006-02-28",
+        "end": "2019-12-31",
+        "cagr": 0.09251124850622183,
+        "sharpe": 0.7052934714666518,
+        "max_drawdown": -0.3549898982853138,
+        "n_periods": 166,
+        "final_equity": 3.416223815118468
+      },
+      "months_invested": 123,
+      "months_total": 167,
+      "bar1_sharpe": false,
+      "bar2_drawdown_25pct_smaller": true,
+      "bar3_cagr_within_1pt": false,
+      "survived_development": false
+    },
+    {
+      "instrument": "JETS",
+      "label": "etf-primary",
+      "strategy": {
+        "name": "JETS",
+        "start": "2016-03-31",
+        "end": "2019-12-31",
+        "cagr": -0.08222518781728583,
+        "sharpe": -0.44284112907536055,
+        "max_drawdown": -0.4247276942728794,
+        "n_periods": 45,
+        "final_equity": 0.7452512284963899
+      },
+      "buy_and_hold": {
+        "name": "JETS-buy-and-hold",
+        "start": "2016-03-31",
+        "end": "2019-12-31",
+        "cagr": 0.05610090011418789,
+        "sharpe": 0.3621833610396835,
+        "max_drawdown": -0.16561529572116784,
+        "n_periods": 45,
+        "final_equity": 1.2617974864103605
+      },
+      "months_invested": 29,
+      "months_total": 46,
+      "bar1_sharpe": false,
+      "bar2_drawdown_25pct_smaller": false,
+      "bar3_cagr_within_1pt": false,
+      "survived_development": false
+    },
+    {
+      "instrument": "XLF",
+      "label": "etf-primary",
+      "strategy": {
+        "name": "XLF",
+        "start": "2006-02-28",
+        "end": "2019-12-31",
+        "cagr": 0.06784887962416764,
+        "sharpe": 0.5869188765207406,
+        "max_drawdown": -0.22562908237733958,
+        "n_periods": 166,
+        "final_equity": 2.5320750671144183
+      },
+      "buy_and_hold": {
+        "name": "XLF-buy-and-hold",
+        "start": "2006-02-28",
+        "end": "2019-12-31",
+        "cagr": 0.026180652092908208,
+        "sharpe": 0.23099849759877655,
+        "max_drawdown": -0.7864096405843087,
+        "n_periods": 166,
+        "final_equity": 1.4597848737157066
+      },
+      "months_invested": 114,
+      "months_total": 167,
+      "bar1_sharpe": true,
+      "bar2_drawdown_25pct_smaller": true,
+      "bar3_cagr_within_1pt": true,
+      "survived_development": true
+    },
+    {
+      "instrument": "XLE",
+      "label": "etf-primary",
+      "strategy": {
+        "name": "XLE",
+        "start": "2006-02-28",
+        "end": "2019-12-31",
+        "cagr": 0.03314613343235284,
+        "sharpe": 0.29539790037270114,
+        "max_drawdown": -0.30305612237806234,
+        "n_periods": 166,
+        "final_equity": 1.4585631535352275
+      },
+      "buy_and_hold": {
+        "name": "XLE-buy-and-hold",
+        "start": "2006-02-28",
+        "end": "2019-12-31",
+        "cagr": 0.02930151090845312,
+        "sharpe": 0.24345501133805633,
+        "max_drawdown": -0.5312309979310632,
+        "n_periods": 166,
+        "final_equity": 1.3852270975484997
+      },
+      "months_invested": 104,
+      "months_total": 167,
+      "bar1_sharpe": true,
+      "bar2_drawdown_25pct_smaller": true,
+      "bar3_cagr_within_1pt": true,
+      "survived_development": true
+    },
+    {
+      "instrument": "XLY",
+      "label": "etf-primary",
+      "strategy": {
+        "name": "XLY",
+        "start": "2006-02-28",
+        "end": "2019-12-31",
+        "cagr": 0.09163503065441847,
+        "sharpe": 0.7734305189569521,
+        "max_drawdown": -0.24191158615587804,
+        "n_periods": 166,
+        "final_equity": 3.373939022762245
+      },
+      "buy_and_hold": {
+        "name": "XLY-buy-and-hold",
+        "start": "2006-02-28",
+        "end": "2019-12-31",
+        "cagr": 0.10241403893068757,
+        "sharpe": 0.6449228200643152,
+        "max_drawdown": -0.5509334505175033,
+        "n_periods": 166,
+        "final_equity": 3.8653060103685006
+      },
+      "months_invested": 134,
+      "months_total": 167,
+      "bar1_sharpe": true,
+      "bar2_drawdown_25pct_smaller": true,
+      "bar3_cagr_within_1pt": false,
+      "survived_development": false
+    },
+    {
+      "instrument": "ai-memory-storage",
+      "label": "hindsight-curated",
+      "strategy": {
+        "name": "ai-memory-storage",
+        "start": "2006-02-28",
+        "end": "2019-12-31",
+        "cagr": 0.08638188553628812,
+        "sharpe": 0.4861129771264991,
+        "max_drawdown": -0.33459097526029347,
+        "n_periods": 166,
+        "final_equity": 3.1065407116339427
+      },
+      "buy_and_hold": {
+        "name": "ai-memory-storage-buy-and-hold",
+        "start": "2006-02-28",
+        "end": "2019-12-31",
+        "cagr": 0.08579031057810149,
+        "sharpe": 0.4060765975068559,
+        "max_drawdown": -0.7705701423905169,
+        "n_periods": 166,
+        "final_equity": 3.083215154844304
+      },
+      "months_invested": 105,
+      "months_total": 167,
+      "bar1_sharpe": true,
+      "bar2_drawdown_25pct_smaller": true,
+      "bar3_cagr_within_1pt": true,
+      "survived_development": true
+    },
+    {
+      "instrument": "data-centers-power",
+      "label": "hindsight-curated",
+      "strategy": {
+        "name": "data-centers-power",
+        "start": "2006-02-28",
+        "end": "2019-12-31",
+        "cagr": 0.03455511076363105,
+        "sharpe": 0.28865793395910816,
+        "max_drawdown": -0.3979290675765895,
+        "n_periods": 166,
+        "final_equity": 1.577119333067378
+      },
+      "buy_and_hold": {
+        "name": "data-centers-power-buy-and-hold",
+        "start": "2006-02-28",
+        "end": "2019-12-31",
+        "cagr": 0.10492874103435978,
+        "sharpe": 0.5507468714363414,
+        "max_drawdown": -0.46603881661909274,
+        "n_periods": 166,
+        "final_equity": 3.9204657850467757
+      },
+      "months_invested": 120,
+      "months_total": 167,
+      "bar1_sharpe": false,
+      "bar2_drawdown_25pct_smaller": false,
+      "bar3_cagr_within_1pt": false,
+      "survived_development": false
+    }
+  ],
+  "primary_survivors": [
+    "XLF",
+    "XLE"
+  ]
+}

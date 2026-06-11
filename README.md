@@ -1,0 +1,56 @@
+# compass
+
+A calm, once-a-day investing advisor: it tells you **where industries are moving**
+(theme trends), **whether the money is real** (financial reality), and **who in a
+strong theme hasn't been paid yet** (laggard radar). It proposes; the human decides.
+
+**Founding rule (inherited from prescient, non-negotiable):**
+
+> *Evidence overrides the feeling.*
+
+No signal in this project earns a place in the app — and no strategy ever touches
+real money — without first surviving an honest, disprove-first backtest. The app is
+built around what survives, not around what feels right.
+
+## Where this project sits
+
+- [`../prescient`](../prescient) — the referee. A disprove-first backtest harness that
+  already killed three retail earnings-options strategies on 2 years of real data for $0.
+  Its governance model (propose-only, no-lookahead, honest costs, sample-size honesty)
+  is carried into this project wholesale. Read
+  `../prescient/docs/program/2026-06-08-prescient-program-review.md` for the full story.
+- [`../vanta`](../vanta) — paused. A point-in-time data-warehouse foundation built for a
+  thesis that was later disproven. Its model patterns (`ingested_at` provenance,
+  normalized adapter records) are reused here in spirit.
+- **compass** — the next chapter: stocks and theme baskets at the **months** timescale,
+  where a person with a laptop has a fair fight. No options. No streaming. No speed race.
+
+## Current status
+
+**Phase 0 — the rulebook.** Documentation only; no code, no database, no API calls.
+
+The Phase 0 deliverable is [`docs/specs/2026-06-10-rulebook.md`](docs/specs/2026-06-10-rulebook.md):
+the precise rules for the three hypotheses (H1 theme trend, H2 financial reality,
+H3 laggard radar), the seed universe of themes, the data-source plan, the backtest
+protocol, and the decision gates for every later phase.
+
+## The phases (from the agreed plan)
+
+| Phase | What | Gate to pass |
+|---|---|---|
+| 0 | Rulebook spec (this) | Rules specific enough that two people would code the same test |
+| 1 | Data foundation (prices, fundamentals, filings, dated themes) | Clean, dated, spot-checked data |
+| 2 | Backtest all three hypotheses | At least one `survived = true` |
+| 3 | FastAPI backend (`/v1`), nightly jobs | A month of clean runs |
+| 4 | Front end (Today / Themes board / Laggard radar / Journal) | Owner trusts and uses it |
+| 5 | Theme birth detection | Manual theme list becomes the bottleneck |
+| 6 | Operate, re-verify quarterly | Ongoing |
+
+Phases 3-5 are built **only** for hypotheses that survive Phase 2. "All three fail" is a
+legitimate, documented end state that costs ~$0 — that is the system working.
+
+## Stack (pinned in the rulebook)
+
+Python 3.11 - `uv` - Supabase/Postgres - FastAPI with versioned `/v1` routes (Phase 3) -
+nightly batch jobs only. Deliberately never built: streaming/real-time anything,
+options anything, auto-trading anything.

@@ -1,0 +1,12 @@
+# Secrets — never committed
+.env
+.env.*
+.secrets/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# OS
+.DS_Store

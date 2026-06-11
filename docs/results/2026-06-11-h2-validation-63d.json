@@ -1,0 +1,448 @@
+{
+  "horizon_bars": 63,
+  "n_quarters": 24,
+  "spread_annualized": 0.14287346117408348,
+  "top_mean": 0.09669891577491846,
+  "middle_mean": 0.05657686625258076,
+  "bottom_mean": 0.06098055048139759,
+  "all_themes_mean": 0.06993458637792711,
+  "monotonic": false,
+  "bar1_spread": true,
+  "bar2_monotonic": false,
+  "survived_development": false,
+  "sample": "too_few",
+  "per_quarter": [
+    {
+      "as_of": "2020-03-31",
+      "top": 0.49907421472697067,
+      "middle": 0.34975970295369496,
+      "bottom": 0.36262046066509157,
+      "ranking": [
+        "cloud-software",
+        "ai-chips",
+        "cybersecurity",
+        "banks-payments",
+        "big-box-retail",
+        "airlines-travel",
+        "ai-memory-storage",
+        "healthcare-glp1",
+        "data-centers-power",
+        "energy"
+      ]
+    },
+    {
+      "as_of": "2020-06-30",
+      "top": 0.057399531564267726,
+      "middle": 0.09718041103086017,
+      "bottom": -0.03869503584499138,
+      "ranking": [
+        "cybersecurity",
+        "ai-memory-storage",
+        "ai-chips",
+        "cloud-software",
+        "healthcare-glp1",
+        "big-box-retail",
+        "data-centers-power",
+        "banks-payments",
+        "energy",
+        "airlines-travel"
+      ]
+    },
+    {
+      "as_of": "2020-09-30",
+      "top": 0.17878588867331202,
+      "middle": 0.16831795787123927,
+      "bottom": 0.2756468862383739,
+      "ranking": [
+        "cybersecurity",
+        "cloud-software",
+        "big-box-retail",
+        "data-centers-power",
+        "ai-chips",
+        "ai-memory-storage",
+        "healthcare-glp1",
+        "banks-payments",
+        "energy",
+        "airlines-travel"
+      ]
+    },
+    {
+      "as_of": "2020-12-31",
+      "top": -0.006939740550759336,
+      "middle": 0.06245292973690783,
+      "bottom": 0.25096621737330277,
+      "ranking": [
+        "cybersecurity",
+        "cloud-software",
+        "big-box-retail",
+        "ai-chips",
+        "healthcare-glp1",
+        "ai-memory-storage",
+        "data-centers-power",
+        "banks-payments",
+        "energy",
+        "airlines-travel"
+      ]
+    },
+    {
+      "as_of": "2021-03-31",
+      "top": 0.1606917001409224,
+      "middle": 0.06692043896027933,
+      "bottom": 0.002121741704193473,
+      "ranking": [
+        "cybersecurity",
+        "cloud-software",
+        "big-box-retail",
+        "ai-chips",
+        "healthcare-glp1",
+        "data-centers-power",
+        "ai-memory-storage",
+        "banks-payments",
+        "energy",
+        "airlines-travel"
+      ]
+    },
+    {
+      "as_of": "2021-06-30",
+      "top": 0.09880389275152246,
+      "middle": 0.009539763648926503,
+      "bottom": 0.002505982606651765,
+      "ranking": [
+        "cybersecurity",
+        "cloud-software",
+        "big-box-retail",
+        "healthcare-glp1",
+        "ai-chips",
+        "ai-memory-storage",
+        "data-centers-power",
+        "energy",
+        "banks-payments",
+        "airlines-travel"
+      ]
+    },
+    {
+      "as_of": "2021-09-30",
+      "top": 0.03930518368335123,
+      "middle": 0.20253592038753332,
+      "bottom": 0.10903448429798694,
+      "ranking": [
+        "airlines-travel",
+        "energy",
+        "cybersecurity",
+        "ai-memory-storage",
+        "ai-chips",
+        "cloud-software",
+        "data-centers-power",
+        "banks-payments",
+        "big-box-retail",
+        "healthcare-glp1"
+      ]
+    },
+    {
+      "as_of": "2021-12-31",
+      "top": 0.1028781178151279,
+      "middle": -0.09062458412880744,
+      "bottom": -0.04731821689111807,
+      "ranking": [
+        "airlines-travel",
+        "energy",
+        "cloud-software",
+        "cybersecurity",
+        "ai-chips",
+        "ai-memory-storage",
+        "banks-payments",
+        "big-box-retail",
+        "healthcare-glp1",
+        "data-centers-power"
+      ]
+    },
+    {
+      "as_of": "2022-03-31",
+      "top": -0.2214437492200991,
+      "middle": -0.20588391939323789,
+      "bottom": -0.09108081785910256,
+      "ranking": [
+        "airlines-travel",
+        "ai-memory-storage",
+        "ai-chips",
+        "energy",
+        "data-centers-power",
+        "cloud-software",
+        "cybersecurity",
+        "banks-payments",
+        "big-box-retail",
+        "healthcare-glp1"
+      ]
+    },
+    {
+      "as_of": "2022-06-30",
+      "top": 0.04775984000200698,
+      "middle": -0.06605919303579144,
+      "bottom": -0.03410845575374418,
+      "ranking": [
+        "data-centers-power",
+        "airlines-travel",
+        "energy",
+        "cybersecurity",
+        "ai-memory-storage",
+        "ai-chips",
+        "healthcare-glp1",
+        "cloud-software",
+        "big-box-retail",
+        "banks-payments"
+      ]
+    },
+    {
+      "as_of": "2022-09-30",
+      "top": 0.09503252168661103,
+      "middle": -0.06607428261979503,
+      "bottom": 0.1068751954630555,
+      "ranking": [
+        "ai-chips",
+        "energy",
+        "data-centers-power",
+        "airlines-travel",
+        "ai-memory-storage",
+        "cybersecurity",
+        "cloud-software",
+        "healthcare-glp1",
+        "big-box-retail",
+        "banks-payments"
+      ]
+    },
+    {
+      "as_of": "2022-12-31",
+      "top": 0.1576695515921077,
+      "middle": 0.08390669220956765,
+      "bottom": 0.03132776441887571,
+      "ranking": [
+        "energy",
+        "cybersecurity",
+        "ai-chips",
+        "data-centers-power",
+        "airlines-travel",
+        "cloud-software",
+        "banks-payments",
+        "healthcare-glp1",
+        "big-box-retail",
+        "ai-memory-storage"
+      ]
+    },
+    {
+      "as_of": "2023-03-31",
+      "top": 0.24662996648236382,
+      "middle": 0.05103576741778068,
+      "bottom": 0.07031754439312417,
+      "ranking": [
+        "cybersecurity",
+        "airlines-travel",
+        "data-centers-power",
+        "cloud-software",
+        "energy",
+        "banks-payments",
+        "big-box-retail",
+        "ai-chips",
+        "healthcare-glp1",
+        "ai-memory-storage"
+      ]
+    },
+    {
+      "as_of": "2023-06-30",
+      "top": -0.056152949526111086,
+      "middle": 0.03187957348718043,
+      "bottom": -0.01088969528634746,
+      "ranking": [
+        "airlines-travel",
+        "cybersecurity",
+        "cloud-software",
+        "banks-payments",
+        "data-centers-power",
+        "big-box-retail",
+        "energy",
+        "ai-chips",
+        "healthcare-glp1",
+        "ai-memory-storage"
+      ]
+    },
+    {
+      "as_of": "2023-09-30",
+      "top": 0.1815574448401358,
+      "middle": 0.12323567642936367,
+      "bottom": 0.11530746819851323,
+      "ranking": [
+        "cybersecurity",
+        "airlines-travel",
+        "cloud-software",
+        "banks-payments",
+        "healthcare-glp1",
+        "data-centers-power",
+        "big-box-retail",
+        "ai-chips",
+        "energy",
+        "ai-memory-storage"
+      ]
+    },
+    {
+      "as_of": "2023-12-31",
+      "top": 0.08477130397694903,
+      "middle": 0.2717954795641402,
+      "bottom": 0.14193042472364756,
+      "ranking": [
+        "cybersecurity",
+        "cloud-software",
+        "airlines-travel",
+        "data-centers-power",
+        "big-box-retail",
+        "banks-payments",
+        "ai-chips",
+        "healthcare-glp1",
+        "ai-memory-storage",
+        "energy"
+      ]
+    },
+    {
+      "as_of": "2024-03-31",
+      "top": 0.04134083120544766,
+      "middle": 0.06132720258687421,
+      "bottom": 0.0024189927790545887,
+      "ranking": [
+        "cybersecurity",
+        "ai-memory-storage",
+        "cloud-software",
+        "ai-chips",
+        "data-centers-power",
+        "big-box-retail",
+        "banks-payments",
+        "airlines-travel",
+        "healthcare-glp1",
+        "energy"
+      ]
+    },
+    {
+      "as_of": "2024-06-30",
+      "top": 0.008279535737462318,
+      "middle": 0.10944977268445316,
+      "bottom": 0.09963806148825809,
+      "ranking": [
+        "ai-memory-storage",
+        "cybersecurity",
+        "cloud-software",
+        "data-centers-power",
+        "airlines-travel",
+        "ai-chips",
+        "healthcare-glp1",
+        "big-box-retail",
+        "banks-payments",
+        "energy"
+      ]
+    },
+    {
+      "as_of": "2024-09-30",
+      "top": 0.02088944312352022,
+      "middle": 0.10709694088994176,
+      "bottom": 0.0011466569084803702,
+      "ranking": [
+        "ai-memory-storage",
+        "cybersecurity",
+        "data-centers-power",
+        "cloud-software",
+        "ai-chips",
+        "energy",
+        "airlines-travel",
+        "healthcare-glp1",
+        "big-box-retail",
+        "banks-payments"
+      ]
+    },
+    {
+      "as_of": "2024-12-31",
+      "top": -0.19379794389450558,
+      "middle": -0.18272020009548198,
+      "bottom": -0.09350776427757208,
+      "ranking": [
+        "ai-memory-storage",
+        "cybersecurity",
+        "ai-chips",
+        "cloud-software",
+        "data-centers-power",
+        "healthcare-glp1",
+        "airlines-travel",
+        "big-box-retail",
+        "banks-payments",
+        "energy"
+      ]
+    },
+    {
+      "as_of": "2025-03-31",
+      "top": 0.30307128452478266,
+      "middle": 0.18682415123094692,
+      "bottom": 0.0045263430339799555,
+      "ranking": [
+        "ai-memory-storage",
+        "ai-chips",
+        "cybersecurity",
+        "data-centers-power",
+        "healthcare-glp1",
+        "cloud-software",
+        "airlines-travel",
+        "big-box-retail",
+        "banks-payments",
+        "energy"
+      ]
+    },
+    {
+      "as_of": "2025-06-30",
+      "top": 0.34602114790777677,
+      "middle": 0.08414144172415339,
+      "bottom": 0.040995099354092034,
+      "ranking": [
+        "ai-chips",
+        "ai-memory-storage",
+        "cybersecurity",
+        "cloud-software",
+        "data-centers-power",
+        "healthcare-glp1",
+        "airlines-travel",
+        "big-box-retail",
+        "banks-payments",
+        "energy"
+      ]
+    },
+    {
+      "as_of": "2025-09-30",
+      "top": 0.05345441016404114,
+      "middle": 0.01382766913796818,
+      "bottom": 0.021123108777150807,
+      "ranking": [
+        "ai-chips",
+        "ai-memory-storage",
+        "cybersecurity",
+        "cloud-software",
+        "healthcare-glp1",
+        "data-centers-power",
+        "airlines-travel",
+        "big-box-retail",
+        "banks-payments",
+        "energy"
+      ]
+    },
+    {
+      "as_of": "2025-12-31",
+      "top": 0.07569255119083851,
+      "middle": -0.11202052261675974,
+      "bottom": 0.14063076504258565,
+      "ranking": [
+        "ai-chips",
+        "ai-memory-storage",
+        "cybersecurity",
+        "cloud-software",
+        "data-centers-power",
+        "airlines-travel",
+        "banks-payments",
+        "big-box-retail",
+        "healthcare-glp1",
+        "energy"
+      ]
+    }
+  ]
+}

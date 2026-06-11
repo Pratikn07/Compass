@@ -71,9 +71,28 @@ z-scores), forward basket returns after costs, 2006–2019:
 Sensitivity: 3 of 4 grid cells pass (126d median, 126d mean, 63d mean); only
 63d-median breaks monotonicity. The effect exists across the grid — not a
 single-point artifact. Sample: 41–42 quarters (`suggestive`, honesty cap).
-**The honest reading:** themes with real, accelerating fundamentals beat
-hype themes over the *next six months* by ~4 points a year — a ranking edge,
-not a get-rich signal, and it must still pass one-shot validation.
+
+### Validation — ONE-SHOT SPENT 2026-06-11: PASSED at 126d
+
+Owner go-ahead given 2026-06-11. The 2020→present window (COVID crash, 2021
+mania, 2022 bear, AI boom) — data the rule had never seen:
+
+| Horizon | Top | Middle | Bottom | Spread (ann.) | Monotonic | Survived |
+|---|---|---|---|---|---|---|
+| 126d | 20.4% | 12.3% | 10.7% | **+19.4%/yr** | yes | **yes** |
+| 63d | 9.7% | 5.7% | 6.1% | +14.3%/yr | no | no |
+
+Direction held, ordering held, and the effect was *stronger* out-of-sample
+(the AI-boom years rewarded real-fundamentals themes heavily — likely
+regime-flattered; the honest expectation remains the development-window
+~4%/yr, not 19%). Honesty caps on record: validation sample is 23 quarters
+(`too_few` — the window is structurally short), and the 63d horizon failed
+monotonicity in BOTH windows — the surviving claim is the **6-month horizon
+only**.
+
+**H2 final verdict: SURVIVED.** The first hypothesis in the program (compass
+and prescient combined) to pass development, sensitivity, and one-shot
+validation. The Phase 2 → 3 gate (rulebook §7) is now formally passed.
 
 ## H3 laggard radar — development verdict: FAILED (cleanly)
 

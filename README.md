@@ -40,16 +40,18 @@ built around what survives, not around what feels right.
   on after-tax Sharpe); only XLF survived robustly across the sensitivity
   grid. Crash protection (drawdown bar) passed almost everywhere — taxes ate
   the rest
-- **H2 development: SURVIVED at the 6-month horizon** (+4.2%/yr top-vs-bottom
-  theme spread, monotonic, robust in 3/4 sweep cells; 41 quarters,
-  `suggestive`). Fundamentals gate lifted at 76% coverage via the EDGAR
-  companyfacts source (owner decision 2026-06-11)
+- **H2: SURVIVED — development, sensitivity, AND one-shot validation**
+  (spent 2026-06-11 on owner go-ahead). Development: +4.2%/yr top-vs-bottom
+  theme spread at the 6-month horizon. Validation 2020→present: direction
+  and ordering held, +19.4%/yr (regime-flattered; `too_few` honesty cap).
+  The first full survivor in the program — **the Phase 2 → 3 gate is
+  passed**
 - **H3 development: FAILED** — 268 laggard trades, base rate 50.4% (coin
   flip), dead at all 18 sensitivity grid points. The laggard radar ships in
   no app
 - Full record: [`docs/phase2-results.md`](docs/phase2-results.md)
-- Validation (2020→present): one-shot, not yet run for H1/H2, owner
-  go-ahead required
+- H1 validation remains one-shot and unspent (XLF-only claim; owner may
+  spend, hold, or pre-register an IRA variant)
 
 Commands: `compass.ingest` (backfill / crosscheck / coverage) and
 `compass.backtest.runner` (calibrate / develop / sweep / validate), both via

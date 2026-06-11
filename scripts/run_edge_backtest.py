@@ -26,13 +26,17 @@ from prescient.edge.data.bars_loader import load_daily_bars
 from prescient.edge.data.cache import JsonFileCache
 from prescient.edge.data.earnings_history import AlphaVantageEarningsHistoryAdapter
 from prescient.edge.data.models import EarningsAnnouncement
-from prescient.edge.data.option_loader import load_option_quotes_for_events
+from prescient.edge.data.option_loader import (
+    load_option_quotes_for_events,
+    load_vol_ramp_straddles_for_events,
+)
 from prescient.edge.runner import run_edge_backtest
 from prescient.edge.strategy import (
     AlwaysUpStrategy,
     CoinFlipStrategy,
     ReactionAwarePeerStrategy,
     ShortVolStrategy,
+    VolRampStrategy,
 )
 from prescient.edge.universe import load_edge_universe
 from prescient.live_data.alpaca_readers import (
@@ -43,6 +47,7 @@ from prescient.live_data.alpaca_readers import (
 _HORIZON_DAYS = 2
 _PEER_WINDOW_DAYS = 21
 _MAX_EXPIRATION_DAYS = 14
+_ENTRY_LEAD_TRADING_DAYS = 5
 
 
 def _cached_earnings(cache, adapter, tickers, start, end, *, request_delay_s=1.0):
@@ -156,6 +161,16 @@ def main() -> None:
     )
     print(f"Tickers with option quotes: {len(option_quotes)}")
 
+    vol_ramp_quotes = load_vol_ramp_straddles_for_events(
+        hist_adapter,
+        events=target_events,
+        as_of_prices=as_of_prices,
+        bars=bars,
+        entry_lead_trading_days=_ENTRY_LEAD_TRADING_DAYS,
+        max_expiration_days=_MAX_EXPIRATION_DAYS,
+    )
+    print(f"Events with vol-ramp straddles: {len(vol_ramp_quotes)}")
+
     result = assemble_edge_dataset(
         announcements=announcements,
         bars=bars,
@@ -163,6 +178,7 @@ def main() -> None:
         target_tickers=[a.ticker for a in target_events],
         horizon_days=_HORIZON_DAYS,
         peer_window_days=_PEER_WINDOW_DAYS,
+        vol_ramp_quotes=vol_ramp_quotes,
     )
     print(
         f"\nCoverage: {len(result.event_contexts)}/{result.events_total} evaluable; "
@@ -174,6 +190,7 @@ def main() -> None:
         strategies=[
             ReactionAwarePeerStrategy(),
             ShortVolStrategy(),
+            VolRampStrategy(),
             CoinFlipStrategy(),
             AlwaysUpStrategy(),
         ],

@@ -95,3 +95,65 @@ def test_event_score_stayed_within_implied_defaults_none() -> None:
         ticker="MU", as_of_date=date(2024, 6, 25), source="x", evaluable=False,
     )
     assert s.stayed_within_implied is None
+
+
+def _vol_ramp_quote(option_type: str, quote_date: date):
+    from prescient.edge.models import OptionQuote
+
+    return OptionQuote(
+        ticker="MU",
+        option_type=option_type,  # type: ignore[arg-type]
+        strike=100.0,
+        expiration_date=date(2026, 7, 3),
+        quote_date=quote_date,
+        bid=2.0,
+        ask=2.0,
+    )
+
+
+def test_prediction_buy_vol_ramp_defaults_false() -> None:
+    from prescient.edge.models import Prediction, PredictionDirection
+
+    p = Prediction(
+        ticker="MU", as_of_date=date(2026, 6, 23),
+        direction=PredictionDirection.NONE, predicted_move_pct=0.0,
+        confidence=0.5, source="x",
+    )
+    assert p.buy_vol_ramp is False
+
+
+def test_event_context_vol_ramp_fields_default_none() -> None:
+    from prescient.edge.models import EventContext
+
+    ctx = EventContext(
+        ticker="MU", earnings_date=date(2026, 6, 24),
+        as_of_date=date(2026, 6, 23), underlying_price=100.0,
+    )
+    assert ctx.entry_as_of_date is None
+    assert ctx.vol_ramp_entry_call is None
+    assert ctx.vol_ramp_entry_put is None
+    assert ctx.vol_ramp_exit_call is None
+    assert ctx.vol_ramp_exit_put is None
+
+
+def test_event_context_accepts_strike_locked_vol_ramp_quotes() -> None:
+    from prescient.edge.models import EventContext
+
+    entry_d, exit_d = date(2026, 6, 16), date(2026, 6, 23)
+    ctx = EventContext(
+        ticker="MU", earnings_date=date(2026, 6, 24),
+        as_of_date=exit_d, underlying_price=100.0,
+        entry_as_of_date=entry_d,
+        vol_ramp_entry_call=_vol_ramp_quote("CALL", entry_d),
+        vol_ramp_entry_put=_vol_ramp_quote("PUT", entry_d),
+        vol_ramp_exit_call=_vol_ramp_quote("CALL", exit_d),
+        vol_ramp_exit_put=_vol_ramp_quote("PUT", exit_d),
+    )
+    assert ctx.entry_as_of_date == entry_d
+    assert ctx.vol_ramp_entry_call is not None
+    assert ctx.vol_ramp_exit_call is not None
+    assert ctx.vol_ramp_entry_call.strike == ctx.vol_ramp_exit_call.strike
+    assert (
+        ctx.vol_ramp_entry_call.expiration_date
+        == ctx.vol_ramp_exit_call.expiration_date
+    )

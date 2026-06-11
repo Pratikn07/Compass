@@ -32,6 +32,7 @@ class Prediction(BaseModel):
     confidence: float = Field(ge=0.0, le=1.0)
     source: str
     sell_straddle: bool = False
+    buy_vol_ramp: bool = False
 
     @field_validator("ticker")
     @classmethod
@@ -116,6 +117,15 @@ class EventContext(BaseModel):
     underlying_price: float
     atm_call: OptionQuote | None = None
     atm_put: OptionQuote | None = None
+    # Pre-earnings vol-ramp fields (strike-locked; see vol-ramp spec). entry_* are
+    # stamped entry_as_of_date; exit_* price the SAME strike+expiration at
+    # as_of_date. The existing atm_call/atm_put stay the exit-ATM quotes used for
+    # the implied move and the through-earnings strategies.
+    entry_as_of_date: date | None = None
+    vol_ramp_entry_call: OptionQuote | None = None
+    vol_ramp_entry_put: OptionQuote | None = None
+    vol_ramp_exit_call: OptionQuote | None = None
+    vol_ramp_exit_put: OptionQuote | None = None
     peer_eps_surprises: dict[str, float] = Field(default_factory=dict)
     peer_stock_reactions: dict[str, float] = Field(default_factory=dict)
     realized_move: RealizedMove | None = None

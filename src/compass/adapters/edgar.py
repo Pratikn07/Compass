@@ -62,9 +62,11 @@ def fetch_ticker_cik_map(cache: JsonFileCache, client: httpx.Client) -> dict[str
     return {row["ticker"].upper(): int(row["cik_str"]) for row in payload.values()}
 
 
-def fetch_company_facts(cik: int, cache: JsonFileCache, client: httpx.Client) -> dict:
+def fetch_company_facts(
+    cik: int, cache: JsonFileCache, client: httpx.Client, *, fresh: bool = False
+) -> dict:
     key = f"edgar:companyfacts:{cik}"
-    payload = cache.get(key)
+    payload = None if fresh else cache.get(key)
     if payload is None:
         resp = client.get(COMPANYFACTS_URL.format(cik=cik), headers=_headers(), timeout=60)
         resp.raise_for_status()
@@ -157,6 +159,8 @@ def parse_quarterly_fundamentals(ticker: str, payload: dict) -> list[Fundamental
 
 
 def fetch_fundamentals(
-    ticker: str, cik: int, cache: JsonFileCache, client: httpx.Client
+    ticker: str, cik: int, cache: JsonFileCache, client: httpx.Client, *, fresh: bool = False
 ) -> list[FundamentalsQuarter]:
-    return parse_quarterly_fundamentals(ticker, fetch_company_facts(cik, cache, client))
+    return parse_quarterly_fundamentals(
+        ticker, fetch_company_facts(cik, cache, client, fresh=fresh)
+    )

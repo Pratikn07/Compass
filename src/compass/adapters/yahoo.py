@@ -78,6 +78,33 @@ def _granularity(payload: dict) -> str | None:
         return None
 
 
+def fetch_daily_bars_fresh(
+    ticker: str, client: httpx.Client, *, start: date
+) -> list[PriceBar]:
+    """Cache-bypassing window fetch for the nightly delta append (and the
+    weekly full refetch that picks up dividend/split restatements)."""
+    period1 = int(datetime(start.year, start.month, start.day, tzinfo=UTC).timestamp())
+    period2 = int(datetime.now(tz=UTC).timestamp())
+    resp = client.get(
+        f"{BASE_URL}/{ticker}",
+        params={
+            "period1": str(period1),
+            "period2": str(period2),
+            "interval": "1d",
+            "events": "div,splits",
+        },
+        headers={"User-Agent": USER_AGENT},
+        timeout=60,
+    )
+    resp.raise_for_status()
+    payload = resp.json()
+    if _granularity(payload) != "1d":
+        raise ValueError(
+            f"yahoo returned granularity {_granularity(payload)!r} for {ticker}, expected 1d"
+        )
+    return parse_chart(ticker, payload)
+
+
 def fetch_daily_bars(ticker: str, cache: JsonFileCache, client: httpx.Client) -> list[PriceBar]:
     """Full daily history for one ticker, through the fetch-once cache.
 

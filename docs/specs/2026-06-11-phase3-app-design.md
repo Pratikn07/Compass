@@ -1,12 +1,17 @@
-# Phase 3 — Backend App Design (DRAFT, conditional)
+# Phase 3 — Backend App Design (ACTIVE, Scenario B)
 
-**Status: DRAFT — DO NOT IMPLEMENT.**
-The rulebook gate (§7) requires ≥1 hypothesis `survived = true` across
-development + sensitivity + validation before Phase 3 code exists. As of
-2026-06-11 that gate is NOT passed (H1 partial/XLF-only with validation
-unspent; H2/H3 awaiting fundamentals). This document exists so the build can
-start the evening the gate passes — it commits to nothing the verdicts haven't
-earned.
+**Status: ACTIVE as of 2026-06-11.**
+The rulebook gate (§7) passed: H2 (financial reality) survived development,
+sensitivity, and its one-shot validation — **at the 126-trading-day (6-month)
+horizon only**. Scenario B applies:
+
+- The ONLY signal that earns the word "consider" is the quarterly H2 theme
+  ranking at the 126d horizon (base rate sourced from the recorded
+  development results, honesty labels attached).
+- Theme trend states (H1 machinery) are displayed as INFORMATION ONLY —
+  H1's validation is unspent and its surviving claim (XLF-only) is too
+  narrow to recommend on.
+- H3 (laggard radar) is dead and appears nowhere.
 
 ## 1. What Phase 3 is
 
@@ -21,18 +26,16 @@ nightly job ──> Supabase (state + recommendations + journal)
                 FastAPI /v1  (read-mostly; writes: overrides, acks)
 ```
 
-## 2. Scenario switch (filled in when verdicts land)
+## 2. Scenario switch — RESOLVED: Scenario B (2026-06-11)
 
-The recommendation layer is assembled ONLY from surviving hypotheses:
-
-| Scenario | What survived | What the app recommends |
+| Scenario | What survived | Outcome |
 |---|---|---|
-| A | H1 narrow (e.g. XLF-only) | Trend on/off state for the surviving instrument(s) only; everything else is informational |
-| B | H2 and/or H3 | Quarterly theme-reality rankings and/or laggard candidates, with base rates from the harness |
-| C | Nothing survives validation | Phase 3 is not built. Program-review write-up instead |
+| A | H1 narrow | not selected (H1 validation unspent, claim too narrow) |
+| **B** | **H2 @ 126d** | **ACTIVE: quarterly theme-reality ranking with recorded base rates** |
+| C | Nothing | avoided |
 
 Theme trend states for ALL themes are always *displayed* (information), but
-the word "consider" appears only next to signals that survived the gate.
+the word "consider" appears only next to the H2 quarterly ranking.
 
 ## 3. Nightly job (`compass.nightly`)
 

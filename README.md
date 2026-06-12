@@ -27,7 +27,25 @@ built around what survives, not around what feels right.
 
 ## Current status
 
-**Phase 2 — backtest harness built and calibrated; H1 judged; H2/H3 awaiting data.**
+**Phase 3 — nightly brain + /v1 API built (Scenario B); 1-month burn-in running.**
+
+- Nightly job: `uv run python -m compass.nightly` — prices delta, fundamentals
+  refresh, theme states (reusing the exact harness modules), H2 quarterly
+  ranking on quarter-end+1, explicit "nothing to do" rows otherwise,
+  self-check alerts. First clean run 2026-06-11 (~3 min)
+- API: `uv run uvicorn compass.api.main:app --port 8420` — `/v1/health`,
+  `/v1/themes`, `/v1/themes/{slug}`, `/v1/recommendations/today`,
+  `/v1/journal`, `POST /v1/overrides` (reason required),
+  `POST /v1/recommendations/{id}/ack`, `POST /v1/rule-changes` (48-hour
+  cooling-off, enforced in the API and by a DB CHECK)
+- The only signal that says "consider" is the H2 ranking (126d claim), with
+  the recorded base rate attached: the edge is in average magnitude
+  (+4.2%/yr dev spread), top beat bottom in 20/41 dev + 14/23 validation
+  quarters — honesty shown on every recommendation
+- Phase 3 close gate: one month of clean nightly runs + parity holding
+  (opened 2026-06-11; not closable before mid-July, recorded not faked)
+
+### Phase 2 record (gate passed 2026-06-11)
 
 - Rulebook (Phase 0): [`docs/specs/2026-06-10-rulebook.md`](docs/specs/2026-06-10-rulebook.md)
   — verdict table of record in §5.6

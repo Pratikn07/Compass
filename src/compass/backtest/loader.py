@@ -6,6 +6,7 @@ The snapshot lives in .cache/backtest/market.json (gitignored, rebuildable).
 from __future__ import annotations
 
 import json
+import time
 from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
@@ -61,14 +62,25 @@ def _fetch_all(client, table: str, columns: str) -> list[dict]:
     rows: list[dict] = []
     start = 0
     while True:
-        page = (
-            client.table(table)
-            .select(columns)
-            .order("ticker")
-            .order("d" if table == "compass_price_bars" else "fiscal_quarter_end")
-            .range(start, start + _PAGE - 1)
-            .execute()
-        ).data
+        # Retry each page: a single transient timeout killed the first real
+        # nightly run 500 pages into the pull. Three attempts, linear backoff.
+        last_exc: Exception | None = None
+        for attempt in range(3):
+            try:
+                page = (
+                    client.table(table)
+                    .select(columns)
+                    .order("ticker")
+                    .order("d" if table == "compass_price_bars" else "fiscal_quarter_end")
+                    .range(start, start + _PAGE - 1)
+                    .execute()
+                ).data
+                break
+            except Exception as exc:  # noqa: BLE001 — transient network faults
+                last_exc = exc
+                time.sleep(2 * (attempt + 1))
+        else:
+            raise RuntimeError(f"page fetch failed after retries at offset {start}") from last_exc
         rows.extend(page)
         if len(page) < _PAGE:
             return rows

@@ -27,7 +27,23 @@ built around what survives, not around what feels right.
 
 ## Current status
 
-**Phase 3 — nightly brain + /v1 API built (Scenario B); 1-month burn-in running.**
+**Phase 4 — front end built and deployed; Phase 3 burn-in continues in the cloud.**
+
+- Web app (`web/`): Next.js + Framer Motion + Recharts on a glass/ink design
+  system. Five screens: Today (the daily answer), Themes, Theme detail,
+  Journal (overrides priced later), Rules (48h cooling-off countdowns).
+  Deployed on Vercel: `compass-web` (Vercel deployment protection is ON —
+  log in with the Vercel account to view, or disable in project settings)
+- API + nightly on Railway (project `compass`): `api` service at
+  `https://api-production-aa65.up.railway.app` (X-Compass-Key auth; health
+  open), `nightly` service ready for cron — **one manual step: set its Cron
+  Schedule to `30 23 * * *` (UTC) in the Railway dashboard**
+- Local dev: `uv run uvicorn compass.api.main:app --port 8420` +
+  `cd web && npm run dev`
+- prescient's deployments are decommissioned (Railway project deleted;
+  Vercel had none); the cloud footprint now belongs to compass
+
+### Phase 3 record
 
 - Nightly job: `uv run python -m compass.nightly` — prices delta, fundamentals
   refresh, theme states (reusing the exact harness modules), H2 quarterly

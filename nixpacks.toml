@@ -1,0 +1,13 @@
+# Railway / Nixpacks build for the compass API (and the nightly cron service,
+# which overrides the start command via NIXPACKS_START_CMD).
+
+[phases.setup]
+nixPkgs = ["python311", "uv", "gcc"]
+
+[phases.install]
+cmds = [
+  "uv sync --frozen --no-dev",
+]
+
+[start]
+cmd = "uv run uvicorn compass.api.main:app --host 0.0.0.0 --port $PORT"

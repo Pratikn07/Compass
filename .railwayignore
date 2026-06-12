@@ -1,0 +1,7 @@
+web/
+node_modules/
+.cache/
+.venv/
+docs/
+tests/
+.git/

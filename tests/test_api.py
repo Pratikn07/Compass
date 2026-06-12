@@ -1,9 +1,17 @@
 """API route tests against an in-memory fake of the store client."""
 from datetime import UTC, datetime, timedelta
 
+import pytest
 from fastapi.testclient import TestClient
 
 from compass.api.main import app, get_client
+
+
+@pytest.fixture(autouse=True)
+def _no_ambient_api_key(monkeypatch):
+    """compass/.env now carries COMPASS_API_KEY (loaded by config's dotenv);
+    tests must not inherit it — auth is opted into per-test."""
+    monkeypatch.delenv("COMPASS_API_KEY", raising=False)
 
 
 class _Query:
@@ -161,6 +169,26 @@ def test_ack_sets_timestamp_once():
     again = client.post("/v1/recommendations/1/ack").json()
     assert again["acknowledged_at"] == db.tables["compass_recommendations"][0]["acknowledged_at"]
     assert client.post("/v1/recommendations/99/ack").status_code == 404
+
+
+def test_api_key_enforced_when_configured(monkeypatch):
+    monkeypatch.setenv("COMPASS_API_KEY", "secret-key")
+    client = _client_with(_seeded_db())
+    # No key -> 401 on data routes
+    assert client.get("/v1/themes").status_code == 401
+    # Wrong key -> 401
+    assert client.get("/v1/themes", headers={"X-Compass-Key": "nope"}).status_code == 401
+    # Right key -> 200
+    ok = client.get("/v1/themes", headers={"X-Compass-Key": "secret-key"})
+    assert ok.status_code == 200
+    # Health stays open for platform probes
+    assert client.get("/v1/health").status_code == 200
+
+
+def test_auth_disabled_without_env(monkeypatch):
+    monkeypatch.delenv("COMPASS_API_KEY", raising=False)
+    client = _client_with(_seeded_db())
+    assert client.get("/v1/themes").status_code == 200
 
 
 def test_rule_change_cooling_off_clock():

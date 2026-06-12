@@ -9,15 +9,20 @@ start a 48-hour cooling-off clock enforced by both this layer and the DB.
 """
 from __future__ import annotations
 
+import os
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException, Request
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 from ..store import make_client
 
 COOLING_OFF_HOURS = 48
+
+# Routes that stay open: health (no data leak; lets Railway probe) and docs.
+_OPEN_PATHS = {"/v1/health", "/docs", "/openapi.json"}
 
 
 def get_client():
@@ -25,6 +30,34 @@ def get_client():
 
 
 app = FastAPI(title="compass", version="0.1.0")
+
+_cors_origins = ["http://localhost:3000"]
+if os.environ.get("COMPASS_WEB_ORIGIN"):
+    _cors_origins.append(os.environ["COMPASS_WEB_ORIGIN"])
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=_cors_origins,
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Content-Type", "X-Compass-Key"],
+)
+
+
+@app.middleware("http")
+async def require_api_key(request: Request, call_next):
+    """Single-user bearer key. If COMPASS_API_KEY is unset (local dev), auth
+    is disabled. CORS preflights pass through untouched."""
+    expected = os.environ.get("COMPASS_API_KEY")
+    if (
+        expected
+        and request.method != "OPTIONS"
+        and request.url.path not in _OPEN_PATHS
+        and request.headers.get("X-Compass-Key") != expected
+    ):
+        from fastapi.responses import JSONResponse
+
+        return JSONResponse({"detail": "missing or invalid X-Compass-Key"}, status_code=401)
+    return await call_next(request)
 
 
 # ---------- read endpoints ----------

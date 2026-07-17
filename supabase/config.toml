@@ -23,7 +23,11 @@ sql_paths = []
 [auth]
 enabled = true
 site_url = "https://prescient-web.vercel.app"
-additional_redirect_urls = ["https://prescient-web.vercel.app", "http://localhost:3000"]
+additional_redirect_urls = [
+  "https://prescient-web.vercel.app",
+  "https://compass-hxyvat8ma-pratiknandoskar07-6729s-projects.vercel.app",
+  "http://localhost:3000",
+]
 enable_signup = false
 enable_anonymous_sign_ins = false
 minimum_password_length = 12

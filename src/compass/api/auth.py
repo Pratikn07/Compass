@@ -42,7 +42,7 @@ class SupabaseClaimsVerifier:
         response = self._client.auth.get_claims(token)
         if response is None:
             raise AuthError("invalid credentials")
-        return response.claims
+        return response["claims"]
 
 
 def get_auth_settings() -> AuthSettings:

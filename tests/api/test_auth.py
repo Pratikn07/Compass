@@ -12,6 +12,7 @@ from compass.api.auth import (
     AuthContext,
     AuthError,
     AuthSettings,
+    SupabaseClaimsVerifier,
     authenticate,
     get_auth_settings,
     get_claims_verifier,
@@ -68,6 +69,33 @@ def test_supabase_jwt_requires_matching_verified_claims() -> None:
 
     assert context.owner_id == OWNER_ID
     assert context.auth_method == "supabase_jwt"
+
+
+def test_supabase_claims_verifier_reads_sdk_typed_dict(monkeypatch) -> None:
+    claims = {
+        "sub": str(OWNER_ID),
+        "iss": "https://example.supabase.co/auth/v1",
+        "aud": "authenticated",
+        "role": "authenticated",
+        "is_anonymous": False,
+    }
+
+    class FakeAuth:
+        def get_claims(self, token: str) -> dict[str, object]:
+            assert token == "signed-user-token"
+            return {"claims": claims, "headers": {}, "signature": b""}
+
+    class FakeClient:
+        auth = FakeAuth()
+
+    monkeypatch.setattr("supabase.create_client", lambda *_args: FakeClient())
+
+    verifier = SupabaseClaimsVerifier(
+        supabase_url="https://example.supabase.co",
+        publishable_key="sb_publishable_example",
+    )
+
+    assert verifier("signed-user-token") == claims
 
 
 @pytest.mark.parametrize(

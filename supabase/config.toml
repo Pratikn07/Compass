@@ -1,0 +1,29 @@
+project_id = "compass"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "graphql_public", "compass_storage"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+shadow_port = 54320
+major_version = 17
+
+[db.migrations]
+enabled = true
+schema_paths = []
+
+[db.seed]
+enabled = false
+sql_paths = []
+
+[auth]
+enabled = true
+site_url = "https://prescient-web.vercel.app"
+additional_redirect_urls = ["https://prescient-web.vercel.app", "http://localhost:3000"]
+enable_signup = false
+enable_anonymous_sign_ins = false
+minimum_password_length = 12

@@ -22,9 +22,9 @@ sql_paths = []
 
 [auth]
 enabled = true
-site_url = "https://prescient-web.vercel.app"
+site_url = "https://compass-pratiknandoskar07-6729s-projects.vercel.app"
 additional_redirect_urls = [
-  "https://prescient-web.vercel.app",
+  "https://compass-pratiknandoskar07-6729s-projects.vercel.app",
   "https://compass-hxyvat8ma-pratiknandoskar07-6729s-projects.vercel.app",
   "http://localhost:3000",
 ]

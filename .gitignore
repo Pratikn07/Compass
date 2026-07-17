@@ -12,6 +12,7 @@ __pycache__/
 
 # Fetch-once HTTP cache (rebuildable)
 .cache/
+.worktrees/
 
 # Web (Next.js)
 web/node_modules/

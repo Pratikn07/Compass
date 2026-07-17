@@ -18,10 +18,13 @@ from datetime import date
 
 import httpx
 
-from .adapters import alpaca, alphavantage, edgar, yahoo
 from .cache import JsonFileCache
 from .config import DEVELOPMENT_START
-from .store import Store, make_client
+from .providers import alpaca_market as alpaca
+from .providers import alpha_vantage as alphavantage
+from .providers import sec_edgar as edgar
+from .providers import yahoo
+from .store import make_warehouse
 from .universe import MEMBERS, THEMES, all_tickers
 
 DEV_END = date(2019, 12, 31)
@@ -60,7 +63,7 @@ def _selected(tickers_arg: list[str] | None) -> list[str]:
 
 
 def backfill(source: str, tickers_arg: list[str] | None) -> None:
-    store = Store(make_client())
+    store = make_warehouse()
     cache = JsonFileCache()
     tickers = _selected(tickers_arg)
 
@@ -92,7 +95,7 @@ def backfill(source: str, tickers_arg: list[str] | None) -> None:
             # richer rows (EPS surprise) are never clobbered by EDGAR's.
             have = {
                 r["ticker"]
-                for r in _fetch_all(store.client, "compass_fundamentals", "ticker")
+                for r in store.fetch_all("fundamentals", "ticker")
             }
             cik_map = edgar.fetch_ticker_cik_map(cache, client)
             todo = [t for t in tickers if t in member_tickers and t not in have]
@@ -154,25 +157,12 @@ def crosscheck(tickers_arg: list[str] | None) -> None:
                   f"worst {worst:.4%}")
 
 
-def _fetch_all(client, table: str, columns: str, page_size: int = 1000) -> list[dict]:
-    rows: list[dict] = []
-    start = 0
-    while True:
-        page = (
-            client.table(table).select(columns).range(start, start + page_size - 1).execute()
-        ).data
-        rows.extend(page)
-        if len(page) < page_size:
-            return rows
-        start += page_size
-
-
 def coverage() -> None:
-    client = make_client()
+    store = make_warehouse()
     dev_start = date.fromisoformat(DEVELOPMENT_START)
 
     print("loading price bars (ticker, d) ...")
-    bars = _fetch_all(client, "compass_price_bars", "ticker,d")
+    bars = store.fetch_all("price_bars", "ticker,d")
     by_ticker: dict[str, list[date]] = {}
     for row in bars:
         by_ticker.setdefault(row["ticker"], []).append(date.fromisoformat(row["d"]))
@@ -203,8 +193,8 @@ def coverage() -> None:
 
     print("\n== Fundamentals coverage (development window "
           f"{dev_start} -> {DEV_END}, member-quarters) ==")
-    fundamentals = _fetch_all(
-        client, "compass_fundamentals", "ticker,fiscal_quarter_end,report_date,revenue"
+    fundamentals = store.fetch_all(
+        "fundamentals", "ticker,fiscal_quarter_end,report_date,revenue"
     )
     fq: dict[str, list[dict]] = {}
     for row in fundamentals:

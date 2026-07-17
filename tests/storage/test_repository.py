@@ -20,6 +20,7 @@ class Query:
         self.database = database
         self.filters: list[tuple[str, object]] = []
         self.inserted: list[dict] | None = None
+        self.upserted: tuple[list[dict], str] | None = None
         self.updated: dict | None = None
         self.ordering: tuple[str, bool] | None = None
         self.maximum: int | None = None
@@ -53,11 +54,36 @@ class Query:
         self.inserted = rows
         return self
 
+    def upsert(self, rows: list[dict], on_conflict: str):
+        self.upserted = (rows, on_conflict)
+        return self
+
     def update(self, payload: dict):
         self.updated = payload
         return self
 
     def execute(self) -> Result:
+        if self.upserted is not None:
+            incoming, on_conflict = self.upserted
+            keys = [key.strip() for key in on_conflict.split(",")]
+            stored = self.database.tables[self.table]
+            output = []
+            for row in incoming:
+                match = next(
+                    (
+                        existing
+                        for existing in stored
+                        if all(str(existing.get(key)) == str(row.get(key)) for key in keys)
+                    ),
+                    None,
+                )
+                if match is None:
+                    match = dict(row)
+                    stored.append(match)
+                else:
+                    match.update(row)
+                output.append(dict(match))
+            return Result(output)
         if self.inserted is not None:
             self.database.tables[self.table].extend(dict(row) for row in self.inserted)
             return Result([dict(row) for row in self.inserted])
@@ -109,6 +135,7 @@ class Database:
             "provider_errors": [],
             "system_health": [],
             "price_bars": [],
+            "storage_write_audit": [],
         }
 
     def schema(self, name: str) -> Schema:
@@ -319,3 +346,69 @@ def test_health_views_return_latest_owner_records() -> None:
     assert repository.provider_health()["recent_errors"][0]["provider"] == "sec"
     assert repository.system_health()[0]["component"] == "database"
     assert repository.detailed_health()["status"] == "healthy"
+
+
+def test_nightly_lifecycle_records_are_idempotent_and_owner_scoped() -> None:
+    database = Database()
+    repository = SupabaseRepository(client=database, owner_id=OWNER_ID)
+    run = {
+        "run_id": "nightly:2026-07-17",
+        "run_type": "nightly",
+        "trigger_type": "scheduled",
+        "scheduled_date": "2026-07-17",
+        "status": "running",
+        "payload": {},
+    }
+
+    repository.start_run(run)
+    repository.start_run(run)
+    repository.record_provider_error(
+        {
+            "provider_error_id": "error:nightly:2026-07-17:yahoo",
+            "provider": "yahoo",
+            "error_type": "TimeoutError",
+            "message": "Provider step failed",
+            "payload": {},
+        }
+    )
+    repository.record_storage_audit(
+        {
+            "storage_write_audit_id": "audit:nightly:2026-07-17:yahoo",
+            "provider": "yahoo",
+            "table_name": "price_bars",
+            "attempted_record_count": 12,
+            "written_record_count": 12,
+            "error_count": 0,
+            "payload": {},
+        }
+    )
+    repository.record_system_health(
+        {
+            "system_health_id": "health:nightly:2026-07-17:database",
+            "component": "database",
+            "status": "healthy",
+            "payload": {},
+        }
+    )
+    repository.persist_learning_report(
+        {
+            "learning_report_id": "edge-backtest:2026-07-17",
+            "report_date": "2026-07-17",
+            "report_type": "edge_backtest",
+            "payload": {"scorecards": {}},
+        }
+    )
+    finished = repository.finish_run(
+        run["run_id"], status="partial", payload={"failed_steps": 1}
+    )
+
+    assert len(database.tables["runs"]) == 1
+    assert finished["status"] == "partial"
+    for table in (
+        "runs",
+        "provider_errors",
+        "storage_write_audit",
+        "system_health",
+        "learning_reports",
+    ):
+        assert database.tables[table][0]["owner_id"] == str(OWNER_ID)

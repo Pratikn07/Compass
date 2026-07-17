@@ -58,7 +58,7 @@ class Market:
         return sorted(rows, key=lambda r: r.fiscal_quarter_end)
 
 
-def _fetch_all(client, table: str, columns: str) -> list[dict]:
+def _fetch_all(store, table: str, columns: str) -> list[dict]:
     rows: list[dict] = []
     start = 0
     while True:
@@ -68,10 +68,9 @@ def _fetch_all(client, table: str, columns: str) -> list[dict]:
         for attempt in range(3):
             try:
                 page = (
-                    client.table(table)
-                    .select(columns)
+                    store.select(table, columns)
                     .order("ticker")
-                    .order("d" if table == "compass_price_bars" else "fiscal_quarter_end")
+                    .order("d" if table == "price_bars" else "fiscal_quarter_end")
                     .range(start, start + _PAGE - 1)
                     .execute()
                 ).data
@@ -88,16 +87,16 @@ def _fetch_all(client, table: str, columns: str) -> list[dict]:
 
 
 def _build_snapshot() -> dict:
-    from ..store import make_client
+    from ..store import make_warehouse
 
-    client = make_client()
-    print("pulling compass_price_bars from Supabase (one-time; snapshot cached) ...")
-    bars = _fetch_all(client, "compass_price_bars", "ticker,d,adj_close,volume")
+    store = make_warehouse()
+    print("pulling price bars from Compass storage (one-time; snapshot cached) ...")
+    bars = _fetch_all(store, "price_bars", "ticker,d,adj_close,volume")
     print(f"  {len(bars)} bars")
-    print("pulling compass_fundamentals ...")
+    print("pulling Compass fundamentals ...")
     funds = _fetch_all(
-        client,
-        "compass_fundamentals",
+        store,
+        "fundamentals",
         "ticker,fiscal_quarter_end,report_date,revenue,operating_income,surprise_pct",
     )
     print(f"  {len(funds)} fundamental quarters")

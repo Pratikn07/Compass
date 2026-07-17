@@ -18,19 +18,22 @@ anything; there is no broker import anywhere in this package.
 from __future__ import annotations
 
 import argparse
-from datetime import date, timedelta
+from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
 import httpx
 
-from .adapters import alphavantage, edgar, yahoo
 from .backtest.calendar import TradingCalendar
 from .backtest.h2_reality import quarter_ends, terciles, theme_scores
 from .backtest.loader import Market, load_market
 from .backtest.series import Series, sma_at, theme_index
 from .cache import JsonFileCache
-from .ingest import _fetch_all
-from .store import Store, make_client
+from .jobs.nightly import NightlyRunResult, StepResult, run_nightly
+from .providers import alpha_vantage as alphavantage
+from .providers import sec_edgar as edgar
+from .providers import yahoo
+from .research.weekly import run_weekly_edge_report
+from .store import Store, make_warehouse
 from .universe import MEMBERS, THEMES, active_members, all_tickers
 
 # Recorded H2 evidence (sources: docs/results/2026-06-10-h2-development-126d.json
@@ -57,13 +60,13 @@ EDGAR_NIGHTLY_CAP = 20
 
 # ---------- step 1: prices ----------
 
-def latest_bar_dates(client) -> dict[str, date]:
+def latest_bar_dates(store: Store) -> dict[str, date]:
     """One tiny indexed query per ticker — NOT a full-table pull (the naive
     version paged 536k rows and took an hour; found on the first real run)."""
     out: dict[str, date] = {}
     for ticker in all_tickers():
         rows = (
-            client.table("compass_price_bars").select("d").eq("ticker", ticker)
+            store.select("price_bars", "d").eq("ticker", ticker)
             .order("d", desc=True).limit(1).execute()
         ).data
         if rows:
@@ -71,8 +74,13 @@ def latest_bar_dates(client) -> dict[str, date]:
     return out
 
 
-def prices_delta(store: Store, http: httpx.Client, today: date) -> int:
-    last = latest_bar_dates(store.client)
+def prices_delta(
+    store: Store,
+    http: httpx.Client,
+    today: date,
+    errors: list[str] | None = None,
+) -> int:
+    last = latest_bar_dates(store)
     full_refresh = today.weekday() == 6  # Sunday: pick up restatements
     written = 0
     for ticker in all_tickers():
@@ -84,19 +92,23 @@ def prices_delta(store: Store, http: httpx.Client, today: date) -> int:
                 bars = yahoo.fetch_daily_bars_fresh(ticker, http, start=start)
             written += store.upsert_price_bars(bars)
         except Exception as exc:  # noqa: BLE001 — log and continue
-            store.log_run(source="nightly-prices", ticker=ticker, records=0,
-                          status="error", error=str(exc)[:500])
-    store.log_run(source="nightly-prices", ticker="*", records=written, status="ok")
+            if errors is not None:
+                errors.append(f"{ticker}:{exc.__class__.__name__}")
     return written
 
 
 # ---------- step 2: fundamentals ----------
 
 def fundamentals_refresh(
-    store: Store, cache: JsonFileCache, http: httpx.Client, today: date
-) -> None:
-    rows = _fetch_all(store.client, "compass_fundamentals", "ticker,fiscal_quarter_end")
+    store: Store,
+    cache: JsonFileCache,
+    http: httpx.Client,
+    today: date,
+    errors: list[str] | None = None,
+) -> int:
+    rows = store.fetch_all("fundamentals", "ticker,fiscal_quarter_end")
     newest: dict[str, date] = {}
+    written = 0
     for r in rows:
         d = date.fromisoformat(r["fiscal_quarter_end"])
         if r["ticker"] not in newest or d > newest[r["ticker"]]:
@@ -115,23 +127,25 @@ def fundamentals_refresh(
             fresh_rows = edgar.fetch_fundamentals(
                 ticker, cik_map[ticker], cache, http, fresh=True
             )
-            n = store.upsert_fundamentals(fresh_rows)
-            store.log_run(source="nightly-edgar", ticker=ticker, records=n, status="ok")
+            written += store.upsert_fundamentals(fresh_rows)
         except Exception as exc:  # noqa: BLE001
-            store.log_run(source="nightly-edgar", ticker=ticker, records=0,
-                          status="error", error=str(exc)[:500])
+            if errors is not None:
+                errors.append(f"edgar:{ticker}:{exc.__class__.__name__}")
 
     # Alpha Vantage enrichment (EPS estimates/surprise) continues until the
     # daily cap; cached tickers cost nothing.
     for m in MEMBERS:
         try:
             av_rows = alphavantage.fetch_fundamentals(m.ticker, cache, http)
-            store.upsert_fundamentals(av_rows)
+            written += store.upsert_fundamentals(av_rows)
         except alphavantage.RateLimited:
+            if errors is not None:
+                errors.append("alpha_vantage:rate_limited")
             break
         except Exception as exc:  # noqa: BLE001
-            store.log_run(source="nightly-av", ticker=m.ticker, records=0,
-                          status="error", error=str(exc)[:500])
+            if errors is not None:
+                errors.append(f"alpha_vantage:{m.ticker}:{exc.__class__.__name__}")
+    return written
 
 
 # ---------- step 3: theme states (pure builder + writer) ----------
@@ -174,8 +188,7 @@ def theme_states(market: Market, store: Store, today: date) -> tuple[date, dict[
         )
         indexes[theme.slug] = idx
         prev_rows = (
-            store.client.table("compass_theme_state_daily")
-            .select("trend_on,days_in_state")
+            store.select("theme_state_daily", "trend_on,days_in_state")
             .eq("theme_slug", theme.slug)
             .lt("d", last_trading.isoformat())
             .order("d", desc=True)
@@ -187,8 +200,11 @@ def theme_states(market: Market, store: Store, today: date) -> tuple[date, dict[
         )
         if row is not None:
             rows.append(row)
-    store._upsert("compass_theme_state_daily", rows, "d,theme_slug")
-    store.log_run(source="nightly-states", ticker="*", records=len(rows), status="ok")
+    store.upsert_rows(
+        "theme_state_daily",
+        rows,
+        on_conflict="owner_id,d,theme_slug",
+    )
     return last_trading, indexes
 
 
@@ -240,12 +256,16 @@ def build_recommendations(
     return rows
 
 
-def recommendations(market: Market, store: Store, on: date) -> int:
+def recommendations(
+    market: Market,
+    store: Store,
+    on: date,
+    *,
+    run_id: str | None = None,
+) -> int:
     cal = market.calendar()
     rows = build_recommendations(market, cal, on)
-    store._upsert("compass_recommendations", rows, "d,hypothesis,instrument")
-    store.log_run(source="nightly-recs", ticker="*", records=len(rows), status="ok")
-    return len(rows)
+    return store.upsert_decisions(run_id=run_id or f"nightly:{on.isoformat()}", rows=rows)
 
 
 # ---------- step 5: self-check ----------
@@ -253,7 +273,7 @@ def recommendations(market: Market, store: Store, on: date) -> int:
 def self_check(store: Store, today: date) -> list[str]:
     alerts: list[str] = []
     spy = (
-        store.client.table("compass_price_bars").select("d").eq("ticker", "SPY")
+        store.select("price_bars", "d").eq("ticker", "SPY")
         .order("d", desc=True).limit(1).execute()
     ).data
     if not spy:
@@ -261,33 +281,99 @@ def self_check(store: Store, today: date) -> list[str]:
     elif (today - date.fromisoformat(spy[0]["d"])).days > STALE_PRICE_ALERT_DAYS:
         alerts.append(f"SPY prices stale: latest {spy[0]['d']}")
     state = (
-        store.client.table("compass_theme_state_daily").select("d")
+        store.select("theme_state_daily", "d")
         .order("d", desc=True).limit(1).execute()
     ).data
     if not state:
         alerts.append("no theme states written yet")
-    for msg in alerts:
-        store.log_run(source="nightly", ticker="*", records=0, status="alert", error=msg)
-    store.log_run(source="nightly", ticker="*", records=len(alerts), status="ok")
     return alerts
 
 
-def run(today: date | None = None) -> None:
-    today = today or date.today()
-    store = Store(make_client())
+def run(today: date | None = None) -> NightlyRunResult:
+    trading_date = today or (datetime.now(UTC).date() - timedelta(days=1))
+    store = make_warehouse()
     cache = JsonFileCache()
+    shared: dict[str, Any] = {}
+
     with httpx.Client() as http:
-        n_prices = prices_delta(store, http, today)
-        print(f"prices: {n_prices} bars upserted")
-        fundamentals_refresh(store, cache, http, today)
-        print("fundamentals: refreshed (EDGAR due + AV until cap)")
-    market = load_market(refresh=True)
-    last_trading, _ = theme_states(market, store, today)
-    print(f"theme states written for {last_trading}")
-    n_recs = recommendations(market, store, last_trading)
-    print(f"recommendations: {n_recs} rows for {last_trading}")
-    alerts = self_check(store, today)
-    print(f"self-check: {'ALERTS: ' + '; '.join(alerts) if alerts else 'clean'}")
+        def seed_step(_run_id: str, _date: date) -> StepResult:
+            counts = store.seed_universe()
+            return StepResult(
+                provider="compass",
+                table_name="companies,themes,theme_memberships",
+                written_record_count=sum(counts.values()),
+                payload=counts,
+            )
+
+        def price_step(_run_id: str, run_date: date) -> StepResult:
+            errors: list[str] = []
+            written = prices_delta(store, http, run_date, errors)
+            return StepResult(
+                provider="yahoo",
+                table_name="price_bars",
+                written_record_count=written,
+                error_count=len(errors),
+                payload={"failures": errors},
+            )
+
+        def fundamentals_step(_run_id: str, run_date: date) -> StepResult:
+            errors: list[str] = []
+            written = fundamentals_refresh(store, cache, http, run_date, errors)
+            return StepResult(
+                provider="sec_edgar,alpha_vantage",
+                table_name="fundamentals",
+                written_record_count=written,
+                error_count=len(errors),
+                payload={"failures": errors},
+            )
+
+        def theme_state_step(_run_id: str, run_date: date) -> StepResult:
+            market = load_market(refresh=True)
+            last_trading, indexes = theme_states(market, store, run_date)
+            shared["market"] = market
+            shared["last_trading"] = last_trading
+            return StepResult(
+                provider="compass",
+                table_name="theme_state_daily",
+                written_record_count=len(indexes),
+            )
+
+        def decision_step(run_id: str, _run_date: date) -> StepResult:
+            market = shared["market"]
+            last_trading = shared["last_trading"]
+            written = recommendations(market, store, last_trading, run_id=run_id)
+            return StepResult(
+                provider="compass",
+                table_name="decision_records,journal_records",
+                written_record_count=written,
+            )
+
+        def health_step(_run_id: str, run_date: date) -> StepResult:
+            alerts = self_check(store, run_date)
+            return StepResult(
+                provider="compass",
+                table_name="system_health",
+                written_record_count=1,
+                error_count=len(alerts),
+                payload={"alerts": alerts},
+            )
+
+        def weekly_backtest(_run_id: str, _run_date: date) -> dict:
+            return run_weekly_edge_report(store)
+
+        return run_nightly(
+            repository=store,
+            trading_date=trading_date,
+            steps=[
+                seed_step,
+                price_step,
+                fundamentals_step,
+                theme_state_step,
+                decision_step,
+                health_step,
+            ],
+            weekly_backtest=weekly_backtest,
+        )
 
 
 def main() -> None:

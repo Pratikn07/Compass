@@ -1,7 +1,7 @@
 """Normalized record types returned by adapters and written by the store.
 
 `ingested_at` is set by the database default at write time (point-in-time
-provenance), so models intentionally do NOT carry it (vanta pattern).
+provenance), so models intentionally do NOT carry it.
 """
 from __future__ import annotations
 

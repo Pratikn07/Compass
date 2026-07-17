@@ -1,4 +1,4 @@
-"""Fetch-once on-disk JSON cache (prescient pattern).
+"""Fetch-once on-disk JSON cache for reproducible provider reads.
 
 Keys are hashed to safe filenames. Callers must only store normalized,
 secret-free data — never raw URLs containing API keys.

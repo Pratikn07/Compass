@@ -25,6 +25,16 @@ class SupabaseRepository:
         rows = self._table(name).insert([owned]).execute().data
         return rows[0]
 
+    def _upsert(self, name: str, row: dict, *, on_conflict: str) -> dict:
+        owned = {**row, "owner_id": self._owner}
+        rows = (
+            self._table(name)
+            .upsert([owned], on_conflict=on_conflict)
+            .execute()
+            .data
+        )
+        return rows[0]
+
     @staticmethod
     def _decode_cursor(cursor: str | None) -> int:
         if cursor is None:
@@ -92,6 +102,56 @@ class SupabaseRepository:
 
     def ping(self) -> None:
         self._select("runs", "run_id").limit(1).execute()
+
+    def start_run(self, row: dict) -> dict:
+        return self._upsert("runs", row, on_conflict="run_id")
+
+    def finish_run(self, run_id: str, *, status: str, payload: dict) -> dict:
+        rows = (
+            self._table("runs")
+            .update(
+                {
+                    "status": status,
+                    "payload": payload,
+                    "completed_at": datetime.now(UTC).isoformat(),
+                }
+            )
+            .eq("owner_id", self._owner)
+            .eq("run_id", run_id)
+            .execute()
+            .data
+        )
+        if not rows:
+            raise RuntimeError("Nightly run disappeared before completion")
+        return rows[0]
+
+    def record_provider_error(self, row: dict) -> dict:
+        return self._upsert(
+            "provider_errors",
+            row,
+            on_conflict="provider_error_id",
+        )
+
+    def record_storage_audit(self, row: dict) -> dict:
+        return self._upsert(
+            "storage_write_audit",
+            row,
+            on_conflict="storage_write_audit_id",
+        )
+
+    def record_system_health(self, row: dict) -> dict:
+        return self._upsert(
+            "system_health",
+            row,
+            on_conflict="system_health_id",
+        )
+
+    def persist_learning_report(self, row: dict) -> dict:
+        return self._upsert(
+            "learning_reports",
+            row,
+            on_conflict="learning_report_id",
+        )
 
     def list_themes(self) -> list[dict]:
         themes = self._select("themes").execute().data
@@ -245,6 +305,15 @@ class SupabaseRepository:
             .data
         )
         return rows[0] if rows else None
+
+    def edge_context_snapshots(self) -> list[dict]:
+        return (
+            self._select("provider_snapshots")
+            .order("as_of")
+            .limit(10_000)
+            .execute()
+            .data
+        )
 
     def list_decisions(
         self,

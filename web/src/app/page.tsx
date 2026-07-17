@@ -27,18 +27,19 @@ export default function TodayPage() {
   const noneRow = today.data.recommendations.find((r) => r.hypothesis === "none");
   const nextRanking = (noneRow?.reasoning as { next_ranking_after?: string })
     ?.next_ranking_after;
-  const alerts = health.data?.recent_alerts ?? [];
+  const degraded = health.data?.components.filter((component) => component.status !== "healthy") ?? [];
+  const latestRun = health.data?.recent_runs.at(0);
 
   return (
     <Cascade className="flex flex-col gap-6">
-      {alerts.length > 0 && (
+      {degraded.length > 0 && (
         <Rise>
           <div
             role="alert"
             className="glass flex items-center gap-3 border-alert/30 p-4 text-sm text-alert"
           >
             <AlertTriangle aria-hidden size={16} />
-            {alerts.length} data alert{alerts.length > 1 ? "s" : ""} — check the
+            {degraded.length} degraded component{degraded.length > 1 ? "s" : ""} — check the
             nightly run before trusting today&apos;s numbers.
           </div>
         </Rise>
@@ -46,8 +47,7 @@ export default function TodayPage() {
 
       <Rise>
         <p className="tnum pt-6 text-center text-xs uppercase tracking-[0.2em] text-text-3">
-          {formatDate(today.data.d)} · data through{" "}
-          {formatDate(health.data?.latest_price_date)}
+          {formatDate(today.data.d)} · latest run {latestRun?.status ?? "unknown"}
         </p>
       </Rise>
 
@@ -89,7 +89,7 @@ export default function TodayPage() {
           </Rise>
           <div className="mx-auto grid w-full max-w-2xl gap-4">
             {recs.map((rec) => (
-              <Rise key={rec.id}>
+              <Rise key={rec.decision_id}>
                 <RecommendationCard rec={rec} />
               </Rise>
             ))}

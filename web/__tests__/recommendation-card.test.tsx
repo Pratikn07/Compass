@@ -14,10 +14,11 @@ vi.mock("@/lib/api", async (importOriginal) => {
 import { api } from "@/lib/api";
 
 const REC: Recommendation = {
-  id: 7,
-  d: "2026-07-01",
+  decision_id: "decision-7",
+  decision_date: "2026-07-01",
   hypothesis: "h2",
   instrument: "ai-chips",
+  theme_slug: "ai-chips",
   action: "consider_enter",
   reasoning: {
     tercile: "top",
@@ -29,6 +30,8 @@ const REC: Recommendation = {
     validation_top_beats_bottom: "14/23 quarters (60.9%)",
   },
   base_rate: 34 / 64,
+  attention_status: "normal",
+  attention_reasons: [],
   acknowledged_at: null,
   acted_at: null,
   action_note: null,
@@ -55,7 +58,7 @@ describe("RecommendationCard", () => {
   it("acknowledge fires the API and flips to seen", async () => {
     render(<RecommendationCard rec={REC} />);
     fireEvent.click(screen.getByRole("button", { name: /acknowledge/i }));
-    await waitFor(() => expect(api.acknowledge).toHaveBeenCalledWith(7));
+    await waitFor(() => expect(api.acknowledge).toHaveBeenCalledWith("decision-7"));
     expect(screen.getByText("Seen")).toBeInTheDocument();
   });
 });

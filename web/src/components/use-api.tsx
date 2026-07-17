@@ -10,7 +10,6 @@ export function useApi<T>(fetcher: () => Promise<T>, deps: unknown[] = []) {
 
   useEffect(() => {
     let alive = true;
-    setError(null);
     fetcher()
       .then((d) => alive && setData(d))
       .catch((e: Error) => alive && setError(e.message));
@@ -20,7 +19,15 @@ export function useApi<T>(fetcher: () => Promise<T>, deps: unknown[] = []) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [...deps, tick]);
 
-  return { data, error, retry: () => setTick((t) => t + 1) };
+  return {
+    data,
+    error,
+    retry: () => {
+      setData(null);
+      setError(null);
+      setTick((t) => t + 1);
+    },
+  };
 }
 
 export function ErrorState({
@@ -32,7 +39,9 @@ export function ErrorState({
 }) {
   return (
     <div className="glass p-6 text-center" role="alert">
-      <p className="text-sm text-text-2">Could not reach the compass API.</p>
+      <p className="text-sm text-text-2">
+        {message.startsWith("401") ? "Your session has expired." : "Could not reach the Compass API."}
+      </p>
       <p className="tnum mt-1 text-xs text-text-3">{message}</p>
       <button
         onClick={onRetry}
@@ -40,6 +49,9 @@ export function ErrorState({
       >
         Retry
       </button>
+      {message.startsWith("401") && (
+        <a href="/login" className="ml-3 text-sm text-accent-a">Sign in</a>
+      )}
     </div>
   );
 }

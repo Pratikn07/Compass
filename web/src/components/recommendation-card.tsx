@@ -29,7 +29,7 @@ export function RecommendationCard({ rec }: { rec: Recommendation }) {
   async function ack() {
     setBusy(true);
     try {
-      await api.acknowledge(rec.id);
+      await api.acknowledge(rec.decision_id);
       setAcked(true);
     } finally {
       setBusy(false);

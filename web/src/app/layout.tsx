@@ -10,7 +10,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "compass",
+  title: "Compass",
   description:
     "A calm, evidence-gated investing advisor. It proposes; you decide.",
 };

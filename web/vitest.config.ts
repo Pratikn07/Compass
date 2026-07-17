@@ -8,9 +8,9 @@ export default defineConfig({
     environment: "jsdom",
     globals: true, // lets Testing Library auto-cleanup between tests
     setupFiles: ["./vitest.setup.ts"],
-    include: ["__tests__/**/*.test.tsx"],
+    include: ["__tests__/**/*.test.{ts,tsx}"],
   },
   resolve: {
-    alias: { "@": path.resolve(__dirname) },
+    alias: { "@": path.resolve(__dirname, "src") },
   },
 });

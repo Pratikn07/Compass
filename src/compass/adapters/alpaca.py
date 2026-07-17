@@ -56,8 +56,8 @@ def fetch_daily_bars(
     pages = cache.get(key)
     if pages is None:
         headers = {
-            "APCA-API-KEY-ID": require_env("ALPACA_API_KEY_ID"),
-            "APCA-API-SECRET-KEY": require_env("ALPACA_API_SECRET_KEY"),
+            "APCA-API-KEY-ID": require_env("ALPACA_MARKET_DATA_KEY_ID"),
+            "APCA-API-SECRET-KEY": require_env("ALPACA_MARKET_DATA_SECRET_KEY"),
         }
         pages = []
         page_token: str | None = None
